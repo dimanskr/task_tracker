@@ -38,6 +38,7 @@ class Task(models.Model):
     STATUS_CHOICES = [
         ("new", "Новая"),
         ("in_progress", "В работе"),
+        ("on_review", "На проверке"),
         ("completed", "Завершена"),
         ("canceled", "Отменена"),
     ]
@@ -60,7 +61,7 @@ class Task(models.Model):
     )
     deadline = models.DateTimeField(**NULLABLE, verbose_name="Срок выполнения")
     status = models.CharField(
-        max_length=20, choices=STATUS_CHOICES, verbose_name="Статус"
+        max_length=20, choices=STATUS_CHOICES, default="new", verbose_name="Статус"
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
