@@ -1,5 +1,6 @@
-from tracker.models import Employee, Task
 from rest_framework import serializers
+
+from tracker.models import Employee, Task
 
 
 class EmployeeSerializer(serializers.ModelSerializer):
