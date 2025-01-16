@@ -2,7 +2,8 @@ from django.urls import path
 from rest_framework.routers import SimpleRouter
 
 from tracker.apps import TrackerConfig
-from tracker.views import (EmployeeViewSet, TaskCreateAPIView,
+from tracker.views import (EmployeeTasksAPIView, EmployeeViewSet,
+                           ImportantTasksAPIView, TaskCreateAPIView,
                            TaskDeleteAPIView, TaskListAPIView,
                            TaskRetrieveAPIView, TaskUpdateAPIView)
 
@@ -17,6 +18,12 @@ urlpatterns = [
     path("task/create/", TaskCreateAPIView.as_view(), name="task-create"),
     path("task/update/<int:pk>/", TaskUpdateAPIView.as_view(), name="task-update"),
     path("task/delete/<int:pk>/", TaskDeleteAPIView.as_view(), name="task-delete"),
+    path(
+        "employees-tasks/", EmployeeTasksAPIView.as_view(), name="employee-tasks-list"
+    ),
+    path(
+        "important-tasks/", ImportantTasksAPIView.as_view(), name="important-tasks-list"
+    ),
 ]
 
 urlpatterns += router.urls
