@@ -2,6 +2,9 @@ from django.db.models import Count, Q
 from rest_framework import serializers
 
 from tracker.models import Employee, Task
+from tracker.validators import (validate_deadline_not_in_past,
+                                validate_deadline_with_parent,
+                                validate_status_on_creation)
 
 
 class EmployeeSerializer(serializers.ModelSerializer):
@@ -18,6 +21,15 @@ class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = "__all__"
+
+    def validate(self, data):
+        """
+        Выполняет общую валидацию данных модели.
+        """
+        validate_deadline_not_in_past(data)
+        validate_deadline_with_parent(data)
+        validate_status_on_creation(self, data)
+        return data
 
 
 class EmployeeTasksSerializer(serializers.ModelSerializer):
