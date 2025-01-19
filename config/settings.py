@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "django_filters",
+    "corsheaders",
     # my apps
     "users",
     "tracker",
@@ -118,3 +119,8 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     "UPDATE_LAST_LOGIN": True,
 }
+
+CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:8000").split(",")  # frotend
+CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:8000").split(",")  # frontend, backend
+
+CORS_ALLOW_ALL_ORIGINS = False
