@@ -31,7 +31,10 @@ class UserRetrieveAPIView(RetrieveAPIView):
         """
         Выбираем сериализатор в зависимости от владельца.
         """
-        if self.request.user == self.get_object():
+        if (
+            self.request.user.is_authenticated
+            and self.request.user == self.get_object()
+        ):
             return UserSerializer  # Полная информация для владельца
         return UserPublicSerializer  # Общая информация для модераторов
 
