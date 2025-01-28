@@ -1,0 +1,178 @@
+[
+  {
+    "model": "tracker.employee",
+    "pk": 1,
+    "fields": {
+      "user": null,
+      "full_name": "Иванов Иван Иванович",
+      "position": "Разработчик"
+    }
+  },
+  {
+    "model": "tracker.employee",
+    "pk": 2,
+    "fields": {
+      "user": null,
+      "full_name": "Петров Петр Петрович",
+      "position": "Разработчик"
+    }
+  },
+  {
+    "model": "tracker.employee",
+    "pk": 3,
+    "fields": {
+      "user": null,
+      "full_name": "Сидорова Анна Владимировна",
+      "position": "Разработчик"
+    }
+  },
+  {
+    "model": "tracker.employee",
+    "pk": 4,
+    "fields": {
+      "user": null,
+      "full_name": "Кузнецов Алексей Сергеевич",
+      "position": "Разработчик"
+    }
+  },
+  {
+    "model": "tracker.task",
+    "pk": 1,
+    "fields": {
+      "title": "Разработка нового функционала",
+      "description": "Необходимо разработать новый модуль для системы.",
+      "parent_task": null,
+      "executor": 1,
+      "deadline": "2025-07-20T12:00:00Z",
+      "status": "in_progress",
+      "created_at": "2025-01-27T12:00:00Z",
+      "updated_at": "2025-01-27T12:00:00Z"
+    }
+  },
+  {
+    "model": "tracker.task",
+    "pk": 2,
+    "fields": {
+      "title": "Оптимизация производительности",
+      "description": "Оптимизировать производительность системы.",
+      "parent_task": null,
+      "executor": 2,
+      "deadline": "2025-08-15T12:00:00Z",
+      "status": "in_progress",
+      "created_at": "2025-01-27T12:00:00Z",
+      "updated_at": "2025-01-27T12:00:00Z"
+    }
+  },
+  {
+    "model": "tracker.task",
+    "pk": 3,
+    "fields": {
+      "title": "Реализация API",
+      "description": "Разработать API для нового модуля.",
+      "parent_task": 1,
+      "executor": 1,
+      "deadline": "2025-06-15T12:00:00Z",
+      "status": "in_progress",
+      "created_at": "2025-01-27T12:00:00Z",
+      "updated_at": "2025-01-27T12:00:00Z"
+    }
+  },
+  {
+    "model": "tracker.task",
+    "pk": 4,
+    "fields": {
+      "title": "Интеграция с фронтендом",
+      "description": "Интегрировать API с фронтенд-приложением.",
+      "parent_task": 1,
+      "executor": 3,
+      "deadline": "2025-06-22T12:00:00Z",
+      "status": "in_progress",
+      "created_at": "2025-01-27T12:00:00Z",
+      "updated_at": "2025-01-27T12:00:00Z"
+    }
+  },
+  {
+    "model": "tracker.task",
+    "pk": 5,
+    "fields": {
+      "title": "Тестирование API",
+      "description": "Провести тестирование разработанного API.",
+      "parent_task": 1,
+      "executor": 4,
+      "deadline": "2025-06-24T12:00:00Z",
+      "status": "in_progress",
+      "created_at": "2025-01-27T12:00:00Z",
+      "updated_at": "2025-01-27T12:00:00Z"
+    }
+  },
+  {
+    "model": "tracker.task",
+    "pk": 6,
+    "fields": {
+      "title": "Рефакторинг кода",
+      "description": "Провести рефакторинг существующего кода.",
+      "parent_task": 2,
+      "executor": null,
+      "deadline": "2025-08-05T12:00:00Z",
+      "status": "new",
+      "created_at": "2025-01-27T12:00:00Z",
+      "updated_at": "2025-01-27T12:00:00Z"
+    }
+  },
+  {
+    "model": "tracker.task",
+    "pk": 7,
+    "fields": {
+      "title": "Оптимизация базы данных",
+      "description": "Оптимизировать запросы к базе данных.",
+      "parent_task": 2,
+      "executor": null,
+      "deadline": "2025-08-10T12:00:00Z",
+      "status": "new",
+      "created_at": "2025-01-27T12:00:00Z",
+      "updated_at": "2025-01-27T12:00:00Z"
+    }
+  },
+  {
+    "model": "tracker.task",
+    "pk": 8,
+    "fields": {
+      "title": "Документирование API",
+      "description": "Создать документацию для разработанного API.",
+      "parent_task": 1,
+      "executor": 1,
+      "deadline": "2025-07-01T12:00:00Z",
+      "status": "in_progress",
+      "created_at": "2025-01-27T12:00:00Z",
+      "updated_at": "2025-01-27T12:00:00Z"
+    }
+  },
+  {
+    "model": "tracker.task",
+    "pk": 9,
+    "fields": {
+      "title": "Тестирование производительности",
+      "description": "Провести нагрузочное тестирование системы.",
+      "parent_task": 2,
+      "executor": null,
+      "deadline": "2025-08-12T12:00:00Z",
+      "status": "new",
+      "created_at": "2025-01-27T12:00:00Z",
+      "updated_at": "2025-01-27T12:00:00Z"
+    }
+  },
+  {
+    "model": "tracker.task",
+    "pk": 10,
+    "fields": {
+      "title": "Разработка интерфейса",
+      "description": "Разработать пользовательский интерфейс для нового модуля.",
+      "parent_task": 1,
+      "executor": 3,
+      "deadline": "2025-07-15T12:00:00Z",
+      "status": "in_progress",
+      "created_at": "2025-01-27T12:00:00Z",
+      "updated_at": "2025-01-27T12:00:00Z"
+    }
+  }
+]
