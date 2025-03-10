@@ -35,4 +35,5 @@ class UserPublicSerializer(serializers.ModelSerializer):
             "city",
             "avatar",
             "tg_chat_id",
+            "is_superuser",
         )

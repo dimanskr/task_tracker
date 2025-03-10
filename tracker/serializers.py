@@ -18,6 +18,15 @@ class EmployeeSerializer(serializers.ModelSerializer):
 class TaskSerializer(serializers.ModelSerializer):
     """Сериализатор задачи"""
 
+    executor = EmployeeSerializer(read_only=True)
+    executor_id = serializers.PrimaryKeyRelatedField(
+        source='executor',
+        queryset=Employee.objects.all(),
+        write_only=True,
+        required=False,
+        allow_null=True
+    )
+
     class Meta:
         model = Task
         fields = "__all__"

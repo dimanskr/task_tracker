@@ -5,7 +5,7 @@ from rest_framework.generics import (CreateAPIView, DestroyAPIView,
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from users.models import User
-from users.permissions import IsModer, IsSelf
+from users.permissions import IsModer, IsSelf, IsModerWithRestrictions
 from users.serializers import UserPublicSerializer, UserSerializer
 
 
@@ -73,5 +73,14 @@ class UserDestroyAPIView(DestroyAPIView):
     queryset = User.objects.all()
     permission_classes = (
         IsAuthenticated,
-        IsModer | IsSelf,
+        IsModerWithRestrictions | IsSelf,
     )
+
+    def perform_destroy(self, instance):
+        # Проверяем, не пытается ли пользователь удалить суперпользователя или модератора
+        if not self.request.user.is_superuser:  # Если не суперпользователь
+            if instance.is_superuser:  # Если пытается удалить суперпользователя
+                raise PermissionDenied("Вы не можете удалить суперпользователя")
+            if instance.groups.filter(name="moderators").exists():  # Если пытается удалить модератора
+                raise PermissionDenied("Вы не можете удалить модератора")
+        super().perform_destroy(instance)
