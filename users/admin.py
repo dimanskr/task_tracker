@@ -13,8 +13,9 @@ class UserAdmin(admin.ModelAdmin):
         "avatar",
         "tg_chat_id",
         "display_groups",
+        "password",
     )
-    exclude = ("password",)
+    # exclude = ("password",)
     list_filter = ("is_superuser", "is_active", "groups")
     search_fields = ("email",)
     filter_horizontal = (

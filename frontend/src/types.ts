@@ -1,9 +1,16 @@
+export interface Position {
+  id: number;
+  name: string;
+  description?: string;
+}
+
 export interface Employee {
   id: number;
+  user?: number | null;
+  user_email?: string;
   full_name: string;
-  position: string;
-  user: number | null;
-  email?: string;
+  positions: Position[];
+  positions_ids?: number[];
   phone?: string;
   city?: string;
   tg_chat_id?: string;
@@ -29,6 +36,8 @@ export interface Task {
   deadline: string | null;
   parent_task: number | null;
   executor: Employee | null;
+  required_positions: Position[];
+  required_positions_ids?: number[];
 }
 
 export interface ImportantTask {
@@ -39,7 +48,16 @@ export interface ImportantTask {
 
 export interface EmployeeWithTasks {
   full_name: string;
-  position: string;
+  positions: Position[];
   active_task_count: number;
   tasks: Task[];
+}
+
+export interface EmployeeFormData {
+  full_name: string;
+  positions_ids: number[];
+  user?: number | null;
+  phone?: string;
+  city?: string;
+  tg_chat_id?: string;
 } 

@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.test import APITestCase
 
-from tracker.models import Employee, Task
+from tracker.models import Employee, Task, Position
 from tracker.validators import (validate_deadline_not_in_past,
                                 validate_deadline_with_parent,
                                 validate_status_on_creation)
@@ -41,27 +41,55 @@ class BaseAPITestCase(APITestCase):
         )
         self.moderator.groups.add(self.moder_group)
 
+        # Создаем специализации
+        self.java_position = Position.objects.create(
+            name="Java developer",
+            description="Java разработчик"
+        )
+        self.python_position = Position.objects.create(
+            name="Python developer",
+            description="Python разработчик"
+        )
+        self.web_position = Position.objects.create(
+            name="Web developer",
+            description="Web разработчик"
+        )
+
         # Создание сотрудников
         self.employee = Employee.objects.create(
-            full_name="John", position="Java developer"
+            full_name="John"
         )
+        self.employee.positions.add(self.java_position)
+        
         self.employee2 = Employee.objects.create(
-            user=self.owner, full_name="Jane", position="Python developer"
+            user=self.owner, 
+            full_name="Jane"
         )
+        self.employee2.positions.add(self.python_position)
 
         # Создание задач
         self.task2 = Task.objects.create(
-            title="Task 2", executor=self.employee2, status="in_progress"
+            title="Task 2", 
+            executor=self.employee2, 
+            status="in_progress"
         )
+        self.task2.required_positions.add(self.python_position)
+        
         self.task = Task.objects.create(
-            title="Task 1", executor=self.employee, status="new", parent_task=self.task2
+            title="Task 1", 
+            executor=self.employee, 
+            status="new", 
+            parent_task=self.task2
         )
+        self.task.required_positions.add(self.java_position)
+        
         self.parent_task = Task.objects.create(
             title="Parent Task",
             executor=self.employee,
             status="new",
             deadline=timezone.now() + timezone.timedelta(days=5),
         )
+        self.parent_task.required_positions.add(self.java_position)
 
 
 class EmployeeViewSetTest(BaseAPITestCase):
@@ -73,7 +101,11 @@ class EmployeeViewSetTest(BaseAPITestCase):
         """
         Тест создания сотрудника
         """
-        data = {"user": self.user.id, "full_name": "User1", "position": "Web developer"}
+        data = {
+            "user": self.user.id, 
+            "full_name": "User1", 
+            "positions_ids": [self.web_position.id]
+        }
         url = reverse("tracker:employees-list")
         self.client.force_authenticate(user=self.moderator)
         response = self.client.post(url, data)
@@ -96,7 +128,10 @@ class EmployeeViewSetTest(BaseAPITestCase):
         Тест обновления сотрудника
         """
         url = reverse("tracker:employees-detail", kwargs={"pk": self.employee2.id})
-        data = {"full_name": "Jane Connor", "position": "Full stack developer"}
+        data = {
+            "full_name": "Jane Connor", 
+            "positions_ids": [self.web_position.id]
+        }
         self.client.force_authenticate(user=self.moderator)
         response = self.client.patch(url, data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -143,8 +178,9 @@ class TaskAPIViewTests(BaseAPITestCase):
         url = reverse("tracker:task-create")
         data = {
             "title": "New Task",
-            "executor": self.employee.id,
+            "executor_id": self.employee.id,
             "status": "new",
+            "required_positions_ids": [self.java_position.id]
         }
         self.client.force_authenticate(user=self.moderator)
         response = self.client.post(url, data)
@@ -177,6 +213,7 @@ class TaskAPIViewTests(BaseAPITestCase):
         url = reverse("tracker:task-update", kwargs={"pk": self.task.id})
         data = {
             "status": "completed",
+            "required_positions_ids": [self.java_position.id, self.python_position.id]
         }
         self.client.force_authenticate(user=self.moderator)
         response = self.client.patch(url, data)

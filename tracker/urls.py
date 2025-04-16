@@ -5,12 +5,14 @@ from tracker.apps import TrackerConfig
 from tracker.views import (EmployeeTasksAPIView, EmployeeViewSet,
                            ImportantTasksAPIView, TaskCreateAPIView,
                            TaskDeleteAPIView, TaskListAPIView,
-                           TaskRetrieveAPIView, TaskUpdateAPIView)
+                           TaskRetrieveAPIView, TaskUpdateAPIView,
+                           PositionViewSet)
 
 app_name = TrackerConfig.name
 
 router = SimpleRouter()
 router.register(r"employees", EmployeeViewSet, basename="employees")
+router.register(r"positions", PositionViewSet, basename="positions")
 
 urlpatterns = [
     path("task-list/", TaskListAPIView.as_view(), name="task-list"),

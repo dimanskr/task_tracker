@@ -15,10 +15,12 @@ import { EmployeesTasks } from './components/EmployeesTasks'
 import { TaskForm } from './components/TaskForm'
 import { EmployeeForm } from './components/EmployeeForm'
 import { Login } from './components/Login'
+import { Register } from './components/Register'
 import { removeAuthToken } from './api'
 import { TaskView } from './components/TaskView'
 import { UserList } from './components/UserList'
 import { UserProfile } from './components/UserProfile'
+import { ProtectedRoute } from './components/ProtectedRoute'
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
@@ -75,13 +77,22 @@ function App() {
                 </Button>
               </>
             ) : (
-              <Button 
-                color="inherit" 
-                component={Link} 
-                to="/login"
-              >
-                Войти
-              </Button>
+              <>
+                <Button 
+                  color="inherit" 
+                  component={Link} 
+                  to="/register"
+                >
+                  Регистрация
+                </Button>
+                <Button 
+                  color="inherit" 
+                  component={Link} 
+                  to="/login"
+                >
+                  Войти
+                </Button>
+              </>
             )}
           </Box>
         </Toolbar>
@@ -91,17 +102,36 @@ function App() {
         <Routes>
           <Route path="/" element={<TaskList />} />
           <Route path="/task/:id" element={<TaskView />} />
-          <Route path="/task/create" element={<TaskForm mode="create" />} />
-          <Route path="/task/update/:id" element={<TaskForm mode="edit" />} />
+          <Route path="/task/create" element={
+            <ProtectedRoute requiresModeration>
+              <TaskForm mode="create" />
+            </ProtectedRoute>
+          } />
+          <Route path="/task/update/:id" element={
+            <ProtectedRoute requiresModeration>
+              <TaskForm mode="edit" />
+            </ProtectedRoute>
+          } />
           <Route path="/employees" element={<EmployeeList />} />
-          <Route path="/employee/create" element={<EmployeeForm mode="create" />} />
-          <Route path="/employee/update/:id" element={<EmployeeForm mode="edit" />} />
+          <Route path="/employee/create" element={
+            <ProtectedRoute requiresModeration>
+              <EmployeeForm mode="create" />
+            </ProtectedRoute>
+          } />
+          <Route path="/employee/update/:id" element={
+            <ProtectedRoute requiresModeration>
+              <EmployeeForm mode="edit" />
+            </ProtectedRoute>
+          } />
           <Route path="/important" element={<ImportantTasks />} />
           <Route path="/employees-tasks" element={<EmployeesTasks />} />
           <Route path="/users" element={
-            (isModerator || isSuperuser) ? <UserList /> : <Navigate to="/" replace state={{ message: 'Доступ запрещен' }} />
+            <ProtectedRoute requiresModeration>
+              <UserList />
+            </ProtectedRoute>
           } />
           <Route path="/user/:id" element={<UserProfile />} />
+          <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login onLoginSuccess={(userId, isModerator, isSuperuser) => {
             console.log('Login success:', { userId, isModerator, isSuperuser });
             setIsAuthenticated(true);

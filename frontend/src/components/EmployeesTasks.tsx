@@ -11,8 +11,83 @@ import {
   ListItem,
   ListItemText
 } from '@mui/material';
-import { EmployeeWithTasks } from '../types';
+import { EmployeeWithTasks, Task } from '../types';
 import { getEmployeesWithTasks } from '../api';
+
+const getStatusColor = (status: Task['status']) => {
+  switch (status) {
+    case 'new':
+      return 'primary';
+    case 'in_progress':
+      return 'warning';
+    case 'completed':
+      return 'success';
+    case 'canceled':
+      return 'error';
+    default:
+      return 'default';
+  }
+};
+
+const getStatusLabel = (status: Task['status']) => {
+  switch (status) {
+    case 'new':
+      return 'Новая';
+    case 'in_progress':
+      return 'В работе';
+    case 'completed':
+      return 'Завершена';
+    case 'canceled':
+      return 'Отменена';
+    default:
+      return status;
+  }
+};
+
+const EmployeeCard: React.FC<{ employee: EmployeeWithTasks }> = ({ employee }) => {
+  return (
+    <Card sx={{ mb: 2 }}>
+      <CardContent>
+        <Typography variant="h6" gutterBottom>
+          {employee.full_name}
+        </Typography>
+        <Typography color="textSecondary" gutterBottom>
+          Специализации: {employee.positions.map(pos => pos.name).join(', ')}
+        </Typography>
+        <Typography color="textSecondary" gutterBottom>
+          Активных задач: {employee.active_task_count}
+        </Typography>
+        
+        {employee.tasks.length > 0 ? (
+          <List>
+            {employee.tasks.map((task) => (
+              <ListItem key={task.id}>
+                <ListItemText
+                  primary={task.title}
+                  secondaryTypographyProps={{ component: 'div' }}
+                  secondary={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                      <Chip
+                        label={getStatusLabel(task.status)}
+                        color={getStatusColor(task.status)}
+                        size="small"
+                      />
+                      <Typography variant="body2" component="span">
+                        Срок: {new Date(task.deadline || '').toLocaleDateString()}
+                      </Typography>
+                    </Box>
+                  }
+                />
+              </ListItem>
+            ))}
+          </List>
+        ) : (
+          <Typography>Нет активных задач</Typography>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
 
 export const EmployeesTasks: React.FC = () => {
   const [employees, setEmployees] = useState<EmployeeWithTasks[]>([]);
@@ -69,45 +144,7 @@ export const EmployeesTasks: React.FC = () => {
       <Grid container spacing={2}>
         {employees.map((employee) => (
           <Grid item xs={12} sm={6} md={4} key={employee.full_name}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  {employee.full_name}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  {employee.position || 'Должность не указана'}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2, mb: 2 }}>
-                  <Typography variant="body1">
-                    Активных задач:
-                  </Typography>
-                  <Chip 
-                    label={employee.active_task_count}
-                    color={employee.active_task_count > 3 ? 'error' : 'primary'}
-                    size="small"
-                  />
-                </Box>
-                {employee.tasks && employee.tasks.length > 0 && (
-                  <>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Текущие задачи:
-                    </Typography>
-                    <List dense>
-                      {employee.tasks
-                        .filter(task => task.status === 'in_progress')
-                        .map(task => (
-                          <ListItem key={task.id}>
-                            <ListItemText 
-                              primary={task.title}
-                              secondary={`Дедлайн: ${new Date(task.deadline).toLocaleDateString()}`}
-                            />
-                          </ListItem>
-                        ))}
-                    </List>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+            <EmployeeCard employee={employee} />
           </Grid>
         ))}
       </Grid>

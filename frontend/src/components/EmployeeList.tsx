@@ -19,79 +19,28 @@ import {
   Link as MuiLink,
   Alert
 } from '@mui/material';
-import { Employee, User } from '../types';
+import { Employee, User, Position } from '../types';
 import { getEmployees, deleteEmployee, getUser } from '../api';
 import { useNavigate, Link } from 'react-router-dom';
 
 export const EmployeeList: React.FC = () => {
   const navigate = useNavigate();
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [users, setUsers] = useState<Record<number, User | null>>({});
-  const [loadingUsers, setLoadingUsers] = useState<Record<number, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
-
-  const fetchEmployeeUser = async (userId: number | string | null) => {
-    if (!userId) {
-      console.log('userId is null or undefined, returning');
-      return;
-    }
-
-    const numericUserId = typeof userId === 'number' ? userId : parseInt(String(userId));
-    
-    if (isNaN(numericUserId)) {
-      console.log('Invalid userId:', userId);
-      return;
-    }
-    
-    if (loadingUsers[numericUserId] || users[numericUserId] !== undefined) {
-      console.log('User data is already loading or exists for userId:', numericUserId);
-      return;
-    }
-
-    try {
-      console.log('Starting to load user data for userId:', numericUserId);
-      setLoadingUsers(prev => ({ ...prev, [numericUserId]: true }));
-      const userData = await getUser(numericUserId);
-      console.log('Successfully loaded user data:', userData);
-      setUsers(prev => ({ ...prev, [numericUserId]: userData }));
-    } catch (error: any) {
-      console.error('Error fetching user:', error);
-      if (error.response?.status === 401) {
-        console.log('Unauthorized error, redirecting to login');
-        navigate('/login', { state: { message: 'Необходима авторизация' } });
-        return;
-      }
-      if (error.response?.status === 403) {
-        console.log('Forbidden error, setting user data to null');
-        setUsers(prev => ({ ...prev, [numericUserId]: null }));
-      } else {
-        console.log('Other error, setting user data to null');
-        setUsers(prev => ({ ...prev, [numericUserId]: null }));
-      }
-    } finally {
-      console.log('Finishing user data load for userId:', numericUserId);
-      setLoadingUsers(prev => ({ ...prev, [numericUserId]: false }));
-    }
-  };
+  const isModerator = localStorage.getItem('isModerator') === 'true';
+  const isSuperuser = localStorage.getItem('isSuperuser') === 'true';
+  const hasManageAccess = isModerator || isSuperuser;
 
   const fetchEmployees = async () => {
     try {
       setLoading(true);
       const data = await getEmployees();
-      console.log('Получены сотрудники:', data);
+      // console.log('Полученные данные сотрудников:', data);
       setEmployees(data);
-      
-      // Загружаем данные пользователей для каждого сотрудника
-      data.forEach(employee => {
-        if (employee.user && typeof employee.user === 'number') {
-          fetchEmployeeUser(employee.user);
-        }
-      });
-      
       setError(null);
     } catch (error: any) {
       console.error('Error fetching employees:', error);
@@ -115,7 +64,7 @@ export const EmployeeList: React.FC = () => {
 
   useEffect(() => {
     fetchEmployees();
-  }, [navigate]);
+  }, []);
 
   const handleDelete = async () => {
     if (!employeeToDelete) return;
@@ -177,7 +126,7 @@ export const EmployeeList: React.FC = () => {
         <Typography variant="h6" gutterBottom>
           Нет доступных сотрудников
         </Typography>
-        {isAuthenticated && (
+        {hasManageAccess && (
           <Button 
             variant="contained" 
             color="primary" 
@@ -197,7 +146,7 @@ export const EmployeeList: React.FC = () => {
         <Typography variant="h4">
           Список сотрудников
         </Typography>
-        {isAuthenticated && (
+        {hasManageAccess && (
           <Button 
             variant="contained" 
             color="primary"
@@ -207,71 +156,51 @@ export const EmployeeList: React.FC = () => {
           </Button>
         )}
       </Box>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
               <TableCell>ФИО</TableCell>
               <TableCell>Должность</TableCell>
-              <TableCell>Пользователь</TableCell>
-              {isAuthenticated && <TableCell>Действия</TableCell>}
+              <TableCell>Email</TableCell>
+              {hasManageAccess && (
+                <>
+                  <TableCell>Телефон</TableCell>
+                  <TableCell>Telegram ID</TableCell>
+                </>
+              )}
+              {hasManageAccess && <TableCell align="right">Действия</TableCell>}
             </TableRow>
           </TableHead>
           <TableBody>
             {employees.map((employee) => (
               <TableRow key={employee.id}>
                 <TableCell>{employee.full_name}</TableCell>
-                <TableCell>{employee.position || '—'}</TableCell>
                 <TableCell>
-                  {employee.user ? (
-                    <Box component="div">
-                      {(() => {
-                        const userId = typeof employee.user === 'number' ? employee.user : parseInt(String(employee.user));
-                        console.log('Employee user ID:', userId, typeof userId);
-                        
-                        if (isNaN(userId)) {
-                          return (
-                            <Typography color="error" variant="body2">
-                              Некорректный ID пользователя
-                            </Typography>
-                          );
-                        }
-
-                        if (loadingUsers[userId]) {
-                          return <CircularProgress size={20} />;
-                        }
-
-                        const userData = users[userId];
-                        if (userData) {
-                          return (
-                            <MuiLink
-                              component={Link}
-                              to={`/user/${userId}`}
-                              sx={{
-                                textDecoration: 'none',
-                                color: '#1976d2',
-                                '&:hover': {
-                                  textDecoration: 'underline'
-                                }
-                              }}
-                            >
-                              {userData.email}
-                            </MuiLink>
-                          );
-                        }
-
-                        return (
-                          <Typography color="error" variant="body2">
-                            Нет доступа к данным пользователя
-                          </Typography>
-                        );
-                      })()}
-                    </Box>
-                  ) : '—'}
+                  {employee.positions && employee.positions.length > 0
+                    ? employee.positions.map(pos => pos.name).join(', ')
+                    : '—'
+                  }
                 </TableCell>
-                {isAuthenticated && (
-                  <TableCell>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
+                <TableCell>
+                  {employee.user_email || '—'}
+                </TableCell>
+                {hasManageAccess && (
+                  <>
+                    <TableCell>{employee.phone || '—'}</TableCell>
+                    <TableCell>{employee.tg_chat_id || '—'}</TableCell>
+                  </>
+                )}
+                {hasManageAccess && (
+                  <TableCell align="right">
+                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
                       <Button
                         size="small"
                         variant="outlined"
@@ -303,12 +232,18 @@ export const EmployeeList: React.FC = () => {
         <DialogTitle>Подтверждение удаления</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Вы действительно хотите удалить сотрудника {employeeToDelete?.full_name}?
+            Вы действительно хотите удалить сотрудника "{employeeToDelete?.full_name}"?
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Отмена</Button>
-          <Button onClick={handleDelete} color="error" autoFocus>
+          <Button onClick={() => setDeleteDialogOpen(false)}>
+            Отмена
+          </Button>
+          <Button 
+            onClick={handleDelete} 
+            color="error" 
+            variant="contained"
+          >
             Удалить
           </Button>
         </DialogActions>

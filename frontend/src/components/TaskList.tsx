@@ -90,6 +90,8 @@ export const TaskList: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const isModerator = localStorage.getItem('isModerator') === 'true';
+  const isSuperuser = localStorage.getItem('isSuperuser') === 'true';
+  const hasManageAccess = isModerator || isSuperuser;
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
@@ -119,7 +121,9 @@ export const TaskList: React.FC = () => {
       const sortedTasks = data.results.sort((a, b) => {
         if (a.parent_task === null && b.parent_task !== null) return -1;
         if (a.parent_task !== null && b.parent_task === null) return 1;
-        return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+        const dateA = a.deadline ? new Date(a.deadline).getTime() : 0;
+        const dateB = b.deadline ? new Date(b.deadline).getTime() : 0;
+        return dateA - dateB;
       });
       
       setTasks(sortedTasks);
@@ -258,7 +262,7 @@ export const TaskList: React.FC = () => {
         <Typography variant="h4">
           Список задач
         </Typography>
-        {isAuthenticated && (
+        {hasManageAccess && (
           <Button 
             variant="contained" 
             color="primary"
@@ -321,11 +325,12 @@ export const TaskList: React.FC = () => {
           <TableHead>
             <TableRow>
               <TableCell width="25%">Название</TableCell>
-              <TableCell width="25%">Описание</TableCell>
+              <TableCell width="20%">Описание</TableCell>
               <TableCell width="10%">Статус</TableCell>
               <TableCell width="15%">Дедлайн</TableCell>
               <TableCell width="10%">Исполнитель</TableCell>
-              {isAuthenticated && <TableCell width="15%">Действия</TableCell>}
+              <TableCell width="10%">Специализации</TableCell>
+              {hasManageAccess && <TableCell width="10%">Действия</TableCell>}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -401,7 +406,7 @@ export const TaskList: React.FC = () => {
                 </TableCell>
                 <TableCell>
                   <Typography variant="body2">
-                    {formatDateTime(task.deadline)}
+                    {task.deadline ? formatDateTime(task.deadline) : '—'}
                   </Typography>
                 </TableCell>
                 <TableCell>
@@ -409,9 +414,23 @@ export const TaskList: React.FC = () => {
                     {task.executor ? task.executor.full_name : '—'}
                   </Typography>
                 </TableCell>
-                {isAuthenticated && (
+                <TableCell>
+                  <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                    {task.required_positions.map((position) => (
+                      <Chip
+                        key={position.id}
+                        label={position.name}
+                        size="small"
+                        color="secondary"
+                        variant="outlined"
+                        sx={{ mb: 0.5 }}
+                      />
+                    ))}
+                  </Stack>
+                </TableCell>
+                {hasManageAccess && (
                   <TableCell>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
                       <Button
                         size="small"
                         variant="outlined"

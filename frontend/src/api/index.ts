@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Employee, Task, ImportantTask, EmployeeWithTasks, User } from '../types';
+import { Employee, Task, ImportantTask, EmployeeWithTasks, User, Position } from '../types';
 
 interface PaginatedResponse<T> {
   count: number;
@@ -15,13 +15,17 @@ interface TaskCreateUpdateData {
   description?: string;
   status?: string;
   deadline?: string;
-  executor?: number | null;
+  executor_id?: number | null;
   parent_task?: number | null;
+  required_positions_ids?: number[];
 }
 
 // Конфигурация axios
 const api = axios.create({
   baseURL: 'http://localhost:8000/',
+  headers: {
+    'Content-Type': 'application/json',
+  }
 });
 
 // Перехватчик для добавления токена к запросам
@@ -31,7 +35,21 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
+}, (error) => {
+  return Promise.reject(error);
 });
+
+// Перехватчик для обработки ответов
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Удаляем токен при получении 401 ошибки
+      localStorage.removeItem('token');
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const setAuthToken = (token: string) => {
   localStorage.setItem('token', token);
@@ -39,6 +57,14 @@ export const setAuthToken = (token: string) => {
 
 export const removeAuthToken = () => {
   localStorage.removeItem('token');
+};
+
+const checkModeratorAccess = () => {
+  const isModerator = localStorage.getItem('isModerator') === 'true';
+  const isSuperuser = localStorage.getItem('isSuperuser') === 'true';
+  if (!isModerator && !isSuperuser) {
+    throw new Error('У вас нет прав для выполнения этого действия');
+  }
 };
 
 // Функции для работы с задачами
@@ -53,16 +79,19 @@ export const getTask = async (id: number): Promise<Task> => {
 };
 
 export const createTask = async (task: TaskCreateUpdateData): Promise<Task> => {
+  checkModeratorAccess();
   const response = await api.post('task/create/', task);
   return response.data;
 };
 
 export const updateTask = async (id: number, task: TaskCreateUpdateData): Promise<Task> => {
+  checkModeratorAccess();
   const response = await api.patch(`task/update/${id}/`, task);
   return response.data;
 };
 
 export const deleteTask = async (id: number): Promise<void> => {
+  checkModeratorAccess();
   await api.delete(`task/delete/${id}/`);
 };
 
@@ -78,6 +107,7 @@ export const getEmployee = async (id: number): Promise<Employee> => {
 };
 
 export const createEmployee = async (employee: Omit<Employee, 'id'>): Promise<Employee> => {
+  checkModeratorAccess();
   const response = await api.post('employees/', employee);
   return response.data;
 };
@@ -88,6 +118,7 @@ export const updateEmployee = async (id: number, employee: Partial<Employee>): P
 };
 
 export const deleteEmployee = async (id: number): Promise<void> => {
+  checkModeratorAccess();
   await api.delete(`employees/${id}/`);
 };
 
@@ -104,10 +135,10 @@ export const getEmployeesWithTasks = async (): Promise<EmployeeWithTasks[]> => {
 
 // Функции для работы с пользователями
 export const getUsers = async (): Promise<User[]> => {
-  console.log('Fetching users with token:', localStorage.getItem('token'));
+  // console.log('Fetching users with token:', localStorage.getItem('token'));
   try {
     const response = await api.get('users/');
-    console.log('Users response:', response.data);
+    // console.log('Users response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -122,6 +153,12 @@ export const getUser = async (id: number): Promise<User> => {
 
 export const updateUser = async (id: number, userData: Partial<User>): Promise<User> => {
   const response = await api.patch(`users/update/${id}/`, userData);
+  
+  // Если в ответе есть новый токен, обновляем его
+  if (response.data.access) {
+    setAuthToken(response.data.access);
+  }
+  
   return response.data;
 };
 
@@ -129,15 +166,43 @@ export const deleteUser = async (id: number): Promise<void> => {
   await api.delete(`users/delete/${id}/`);
 };
 
+// Функции для работы с позициями
+export const getPositions = async (): Promise<Position[]> => {
+  const response = await api.get('positions/');
+  return response.data;
+};
+
+export const getPosition = async (id: number): Promise<Position> => {
+  const response = await api.get(`positions/${id}/`);
+  return response.data;
+};
+
+export const createPosition = async (position: Omit<Position, 'id'>): Promise<Position> => {
+  checkModeratorAccess();
+  const response = await api.post('positions/', position);
+  return response.data;
+};
+
+export const updatePosition = async (id: number, position: Partial<Position>): Promise<Position> => {
+  checkModeratorAccess();
+  const response = await api.patch(`positions/${id}/`, position);
+  return response.data;
+};
+
+export const deletePosition = async (id: number): Promise<void> => {
+  checkModeratorAccess();
+  await api.delete(`positions/${id}/`);
+};
+
 // Функции для аутентификации
 export const login = async (email: string, password: string) => {
-  console.log('Sending login request with:', { email });
+  // console.log('Sending login request with:', { email });
   const response = await api.post('users/login/', { email, password });
-  console.log('Full login response:', response);
-  console.log('Login response data:', response.data);
+  // console.log('Full login response:', response);
+  // console.log('Login response data:', response.data);
   
   // Получаем токен доступа
-  const { access } = response.data;
+  const { access, user_id, is_moderator, is_superuser } = response.data;
   if (!access) {
     throw new Error('Не получен токен доступа');
   }
@@ -145,32 +210,29 @@ export const login = async (email: string, password: string) => {
   // Сохраняем токен
   setAuthToken(access);
 
-  // Получаем данные пользователя
-  try {
-    // Декодируем JWT токен для получения данных пользователя
-    const base64Url = access.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-    }).join(''));
+  // Сохраняем данные пользователя
+  localStorage.setItem('userId', user_id.toString());
+  localStorage.setItem('isModerator', is_moderator.toString());
+  localStorage.setItem('isSuperuser', is_superuser.toString());
 
-    const tokenData = JSON.parse(jsonPayload);
-    console.log('Decoded token data:', tokenData);
+  return {
+    user_id,
+    is_moderator,
+    is_superuser,
+    access
+  };
+};
 
-    // Проверяем наличие группы модераторов в токене
-    const isModerator = tokenData.groups?.includes('moderators') || false;
-    console.log('Is moderator:', isModerator);
-
-    return {
-      user_id: tokenData.user_id,
-      is_moderator: isModerator,
-      is_superuser: tokenData.is_superuser || false,
-      access: access
-    };
-  } catch (error) {
-    console.error('Error parsing token:', error);
-    throw new Error('Ошибка при обработке токена');
-  }
+export const register = async (userData: {
+  email: string;
+  password: string;
+  phone?: string;
+  city?: string;
+  full_name: string;
+  positions_ids: number[];
+}) => {
+  const response = await api.post('users/register/', userData);
+  return response.data;
 };
 
 export const refreshToken = async (refresh: string) => {

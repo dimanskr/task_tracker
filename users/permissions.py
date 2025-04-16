@@ -58,3 +58,11 @@ class IsOwner(permissions.BasePermission):
         if obj.user == request.user:
             return True
         return False
+
+
+class IsEmployeeOwner(permissions.BasePermission):
+    """Проверяет, является ли пользователь владельцем сотрудника."""
+
+    def has_object_permission(self, request, view, obj):
+        # Проверяем, привязан ли сотрудник к текущему пользователю
+        return obj.user and obj.user == request.user

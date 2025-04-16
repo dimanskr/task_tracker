@@ -13,11 +13,13 @@ import {
   Alert,
   SelectChangeEvent,
   FormHelperText,
-  Stack
+  Stack,
+  Chip,
+  OutlinedInput
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Task, Employee } from '../types';
-import { createTask, updateTask, getTask, getEmployees, getTasks } from '../api';
+import { Task, Employee, Position } from '../types';
+import { createTask, updateTask, getTask, getEmployees, getTasks, getPositions } from '../api';
 
 interface ValidationErrors {
   [key: string]: string[];
@@ -29,6 +31,7 @@ interface TaskFormProps {
 
 interface TaskFormData extends Partial<Task> {
   executor_id?: number | null;
+  required_positions_ids?: number[];
 }
 
 export const TaskForm: React.FC<TaskFormProps> = ({ mode }) => {
@@ -38,6 +41,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ mode }) => {
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
   const [availableTasks, setAvailableTasks] = useState<Task[]>([]);
   const [formData, setFormData] = useState<TaskFormData>({
     title: '',
@@ -45,26 +49,30 @@ export const TaskForm: React.FC<TaskFormProps> = ({ mode }) => {
     status: 'new',
     deadline: '',
     executor_id: null,
-    parent_task: null
+    parent_task: null,
+    required_positions_ids: []
   });
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [employeesData, tasksData] = await Promise.all([
+        const [employeesData, tasksData, positionsData] = await Promise.all([
           getEmployees(),
-          getTasks()
+          getTasks(),
+          getPositions()
         ]);
         
         setEmployees(employeesData);
         setAvailableTasks(tasksData.results);
+        setPositions(positionsData);
 
         if (mode === 'edit' && id) {
           const taskData = await getTask(parseInt(id));
           setFormData({
             ...taskData,
-            executor_id: taskData.executor?.id || null
+            executor_id: taskData.executor?.id || null,
+            required_positions_ids: taskData.required_positions.map(p => p.id)
           });
         }
       } catch (error: any) {
@@ -87,25 +95,28 @@ export const TaskForm: React.FC<TaskFormProps> = ({ mode }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setValidationErrors({});
-    
     try {
       setLoading(true);
-      const { executor_id, ...taskData } = formData;
-      
-      const dataToSend = {
-        ...taskData,
-        executor: executor_id
+      setError(null);
+      setValidationErrors({});
+
+      const { executor_id, required_positions_ids, ...rest } = formData;
+      const taskData = {
+        ...rest,
+        deadline: formData.deadline || undefined,
+        executor_id: executor_id || undefined,
+        required_positions_ids: required_positions_ids || []
       };
-      
+
       if (mode === 'create') {
-        await createTask(dataToSend);
+        await createTask(taskData);
       } else if (id) {
-        await updateTask(parseInt(id), dataToSend);
+        await updateTask(parseInt(id), taskData);
       }
+
       navigate('/');
     } catch (error: any) {
+      console.error('Error submitting task:', error);
       if (error.response?.status === 401) {
         navigate('/login', { state: { message: 'Необходима авторизация' } });
         return;
@@ -114,46 +125,12 @@ export const TaskForm: React.FC<TaskFormProps> = ({ mode }) => {
         setError('У вас нет прав для выполнения этого действия');
         return;
       }
-      if (error.response?.status === 400) {
-        const errorData = error.response.data;
-        console.log('Raw error data:', errorData);
-        
-        if (typeof errorData === 'object') {
-          setValidationErrors(errorData);
-          // Формируем список ошибок валидации
-          const errorMessages = Object.entries(errorData)
-            .flatMap(([field, errors]) => {
-              console.log(`Processing field "${field}" with errors:`, errors);
-              const errArray = Array.isArray(errors) ? errors : [errors];
-              console.log('Converted to array:', errArray);
-              
-              // Если это общая ошибка формы
-              if (field === 'non_field_errors') {
-                return errArray;
-              }
-              
-              // Для остальных полей добавляем название поля к каждой ошибке
-              const fieldName = {
-                title: 'Название',
-                description: 'Описание',
-                deadline: 'Дедлайн',
-                status: 'Статус',
-                executor: 'Исполнитель',
-                parent_task: 'Родительская задача'
-              }[field] || field;
-              
-              const result = errArray.map(err => `${fieldName}: ${err}`);
-              console.log('Final messages for field:', result);
-              return result;
-            })
-            .filter(Boolean);
-          console.log('Final error messages:', errorMessages);
-          setError(errorMessages.join('\n'));
-        } else {
-          setError(errorData || 'Ошибка валидации формы');
-        }
+      if (error.response?.data?.detail) {
+        setError(error.response.data.detail);
+      } else if (error.response?.data) {
+        setValidationErrors(error.response.data);
       } else {
-        setError(error.response?.data?.detail || 'Произошла ошибка при сохранении задачи');
+        setError('Произошла ошибка при сохранении задачи');
       }
     } finally {
       setLoading(false);
@@ -234,7 +211,6 @@ export const TaskForm: React.FC<TaskFormProps> = ({ mode }) => {
             value={formData.deadline ? formData.deadline.slice(0, 16) : ''}
             onChange={handleTextChange}
             fullWidth
-            required
             InputLabelProps={{ shrink: true }}
             error={!!validationErrors.deadline}
             helperText={validationErrors.deadline?.join('\n')}
@@ -288,7 +264,46 @@ export const TaskForm: React.FC<TaskFormProps> = ({ mode }) => {
             )}
           </FormControl>
 
-          <FormControl fullWidth margin="normal">
+          <FormControl 
+            fullWidth
+            error={!!validationErrors.required_positions}
+          >
+            <InputLabel>Требуемые специализации</InputLabel>
+            <Select
+              name="required_positions_ids"
+              multiple
+              value={formData.required_positions_ids || []}
+              onChange={handleSelectChange}
+              input={<OutlinedInput label="Требуемые специализации" />}
+              renderValue={(selected) => (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {(selected as number[]).map((value) => (
+                    <Chip
+                      key={value}
+                      label={positions.find(p => p.id === value)?.name || ''}
+                      size="small"
+                    />
+                  ))}
+                </Box>
+              )}
+            >
+              {positions.map(position => (
+                <MenuItem key={position.id} value={position.id}>
+                  {position.name}
+                </MenuItem>
+              ))}
+            </Select>
+            {validationErrors.required_positions && (
+              <FormHelperText>
+                {validationErrors.required_positions.join('\n')}
+              </FormHelperText>
+            )}
+          </FormControl>
+
+          <FormControl 
+            fullWidth
+            error={!!validationErrors.parent_task}
+          >
             <InputLabel>Родительская задача</InputLabel>
             <Select
               name="parent_task"
@@ -297,30 +312,32 @@ export const TaskForm: React.FC<TaskFormProps> = ({ mode }) => {
               label="Родительская задача"
             >
               <MenuItem value="">Нет родительской задачи</MenuItem>
-              {availableTasks
-                .filter(task => task.id !== Number(id)) // Исключаем текущую задачу из списка
-                .map(task => (
-                  <MenuItem key={task.id} value={task.id}>
-                    {task.title}
-                  </MenuItem>
+              {availableTasks.map(task => (
+                <MenuItem key={task.id} value={task.id}>
+                  {task.title}
+                </MenuItem>
               ))}
             </Select>
+            {validationErrors.parent_task && (
+              <FormHelperText>
+                {validationErrors.parent_task.join('\n')}
+              </FormHelperText>
+            )}
           </FormControl>
 
-          <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-            <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              disabled={loading}
-            >
-              {mode === 'create' ? 'Создать' : 'Сохранить'}
-            </Button>
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
             <Button
               variant="outlined"
               onClick={() => navigate('/')}
             >
               Отмена
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+            >
+              {mode === 'create' ? 'Создать' : 'Сохранить'}
             </Button>
           </Box>
         </Stack>

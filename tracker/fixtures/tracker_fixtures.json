@@ -1,11 +1,37 @@
 [
   {
+    "model": "tracker.position",
+    "pk": 1,
+    "fields": {
+      "name": "Тестировщик",
+      "description": "Тестировщик кода"
+    }
+  },
+  {
+    "model": "tracker.position",
+    "pk": 2,
+    "fields": {
+      "name": "Разработчик",
+      "description": "Разработчик - программист"
+    }
+  },
+  {
+    "model": "tracker.position",
+    "pk": 3,
+    "fields": {
+      "name": "Менеджер",
+      "description": "Менеджер проекта"
+    }
+  },
+  {
     "model": "tracker.employee",
     "pk": 1,
     "fields": {
       "user": null,
       "full_name": "Иванов Иван Иванович",
-      "position": "Разработчик"
+      "positions": [
+        2
+      ]
     }
   },
   {
@@ -14,7 +40,9 @@
     "fields": {
       "user": null,
       "full_name": "Петров Петр Петрович",
-      "position": "Разработчик"
+      "positions": [
+        2
+      ]
     }
   },
   {
@@ -23,7 +51,9 @@
     "fields": {
       "user": null,
       "full_name": "Сидорова Анна Владимировна",
-      "position": "Разработчик"
+      "positions": [
+        2
+      ]
     }
   },
   {
@@ -32,7 +62,21 @@
     "fields": {
       "user": null,
       "full_name": "Кузнецов Алексей Сергеевич",
-      "position": "Разработчик"
+      "positions": [
+        1
+      ]
+    }
+  },
+  {
+    "model": "tracker.employee",
+    "pk": 7,
+    "fields": {
+      "user": null,
+      "full_name": "Колыванов Юрий Александрович",
+      "positions": [
+        2,
+        1
+      ]
     }
   },
   {
@@ -46,7 +90,10 @@
       "deadline": "2025-07-20T12:00:00Z",
       "status": "in_progress",
       "created_at": "2025-01-27T12:00:00Z",
-      "updated_at": "2025-01-27T12:00:00Z"
+      "updated_at": "2025-01-27T12:00:00Z",
+      "required_positions": [
+        2
+      ]
     }
   },
   {
@@ -60,7 +107,10 @@
       "deadline": "2025-08-15T12:00:00Z",
       "status": "in_progress",
       "created_at": "2025-01-27T12:00:00Z",
-      "updated_at": "2025-01-27T12:00:00Z"
+      "updated_at": "2025-01-27T12:00:00Z",
+      "required_positions": [
+        2
+      ]
     }
   },
   {
@@ -74,7 +124,10 @@
       "deadline": "2025-06-15T12:00:00Z",
       "status": "in_progress",
       "created_at": "2025-01-27T12:00:00Z",
-      "updated_at": "2025-01-27T12:00:00Z"
+      "updated_at": "2025-01-27T12:00:00Z",
+      "required_positions": [
+        2
+      ]
     }
   },
   {
@@ -88,7 +141,10 @@
       "deadline": "2025-06-22T12:00:00Z",
       "status": "in_progress",
       "created_at": "2025-01-27T12:00:00Z",
-      "updated_at": "2025-01-27T12:00:00Z"
+      "updated_at": "2025-01-27T12:00:00Z",
+      "required_positions": [
+        2
+      ]
     }
   },
   {
@@ -102,7 +158,10 @@
       "deadline": "2025-06-24T12:00:00Z",
       "status": "in_progress",
       "created_at": "2025-01-27T12:00:00Z",
-      "updated_at": "2025-01-27T12:00:00Z"
+      "updated_at": "2025-01-27T12:00:00Z",
+      "required_positions": [
+        1
+      ]
     }
   },
   {
@@ -116,7 +175,10 @@
       "deadline": "2025-08-05T12:00:00Z",
       "status": "new",
       "created_at": "2025-01-27T12:00:00Z",
-      "updated_at": "2025-01-27T12:00:00Z"
+      "updated_at": "2025-01-27T12:00:00Z",
+      "required_positions": [
+        2
+      ]
     }
   },
   {
@@ -130,7 +192,10 @@
       "deadline": "2025-08-10T12:00:00Z",
       "status": "new",
       "created_at": "2025-01-27T12:00:00Z",
-      "updated_at": "2025-01-27T12:00:00Z"
+      "updated_at": "2025-01-27T12:00:00Z",
+      "required_positions": [
+        2
+      ]
     }
   },
   {
@@ -144,7 +209,10 @@
       "deadline": "2025-07-01T12:00:00Z",
       "status": "in_progress",
       "created_at": "2025-01-27T12:00:00Z",
-      "updated_at": "2025-01-27T12:00:00Z"
+      "updated_at": "2025-01-27T12:00:00Z",
+      "required_positions": [
+        2
+      ]
     }
   },
   {
@@ -158,7 +226,10 @@
       "deadline": "2025-08-12T12:00:00Z",
       "status": "new",
       "created_at": "2025-01-27T12:00:00Z",
-      "updated_at": "2025-01-27T12:00:00Z"
+      "updated_at": "2025-01-27T12:00:00Z",
+      "required_positions": [
+        1
+      ]
     }
   },
   {
@@ -172,7 +243,10 @@
       "deadline": "2025-07-15T12:00:00Z",
       "status": "in_progress",
       "created_at": "2025-01-27T12:00:00Z",
-      "updated_at": "2025-01-27T12:00:00Z"
+      "updated_at": "2025-01-27T12:00:00Z",
+      "required_positions": [
+        2
+      ]
     }
   }
 ]

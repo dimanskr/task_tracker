@@ -9,7 +9,8 @@ import {
   Button,
   Divider,
   Grid,
-  Link
+  Link,
+  Stack
 } from '@mui/material';
 import { useNavigate, useParams, Link as RouterLink } from 'react-router-dom';
 import { Task } from '../types';
@@ -23,6 +24,8 @@ const getStatusColor = (status: string) => {
       return 'warning';
     case 'completed':
       return 'success';
+    case 'canceled':
+      return 'error';
     default:
       return 'default';
   }
@@ -36,13 +39,16 @@ const getStatusLabel = (status: string) => {
       return 'В работе';
     case 'completed':
       return 'Завершена';
+    case 'canceled':
+      return 'Отменена';
     default:
       return status;
   }
 };
 
 const formatDateTime = (dateString: string) => {
-  return new Date(dateString).toLocaleString('ru-RU', {
+  const date = new Date(dateString);
+  return date.toLocaleString('ru-RU', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -166,6 +172,28 @@ export const TaskView: React.FC = () => {
           </Typography>
         </Grid>
 
+        <Grid item xs={12}>
+          <Typography variant="h6" gutterBottom>
+            Требуемые специализации
+          </Typography>
+          {task.required_positions.length > 0 ? (
+            <Stack direction="row" spacing={1}>
+              {task.required_positions.map((position) => (
+                <Chip
+                  key={position.id}
+                  label={position.name}
+                  color="secondary"
+                  variant="outlined"
+                />
+              ))}
+            </Stack>
+          ) : (
+            <Typography variant="body1">
+              Специализации не указаны
+            </Typography>
+          )}
+        </Grid>
+
         {task.parent_task && (
           <Grid item xs={12}>
             <Typography variant="h6" gutterBottom>
@@ -191,9 +219,9 @@ export const TaskView: React.FC = () => {
 
         <Grid item xs={12}>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-            Создано: {formatDateTime(task.created_at)}
-            {task.updated_at !== task.created_at && (
-              <> • Обновлено: {formatDateTime(task.updated_at)}</>
+            Создано: {formatDateTime((task as any).created_at)}
+            {(task as any).updated_at !== (task as any).created_at && (
+              <> • Обновлено: {formatDateTime((task as any).updated_at)}</>
             )}
           </Typography>
         </Grid>

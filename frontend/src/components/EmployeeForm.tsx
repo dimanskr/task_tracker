@@ -7,156 +7,171 @@ import {
   Paper,
   CircularProgress,
   Alert,
-  Stack
+  Stack,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Chip,
+  OutlinedInput,
+  SelectChangeEvent
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Employee } from '../types';
-import { createEmployee, updateEmployee, getEmployee } from '../api';
+import { Employee, User, Position } from '../types';
+import { createEmployee, updateEmployee, getEmployee, getUsers, getPositions } from '../api';
 
 interface ValidationErrors {
   [key: string]: string[];
 }
 
-interface EmployeeFormProps {
-  mode: 'create' | 'edit';
-}
-
-interface EmployeeFormData extends Omit<Employee, 'id'> {
+interface FormData {
   full_name: string;
-  position: string;
-  user: number | null;
-  email?: string;
+  positions_ids: number[];
+  user_id?: number | null;
+  user?: number | null;
   phone?: string;
   city?: string;
   tg_chat_id?: string;
 }
 
-export const EmployeeForm: React.FC<EmployeeFormProps> = ({ mode }) => {
+export const EmployeeForm: React.FC = () => {
   const navigate = useNavigate();
-  const { id } = useParams();
-  const [loading, setLoading] = useState(false);
+  const { id } = useParams<{ id: string }>();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
-  const [formData, setFormData] = useState<EmployeeFormData>({
+  const [users, setUsers] = useState<User[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
+  const isModerator = localStorage.getItem('isModerator') === 'true';
+  const isSuperuser = localStorage.getItem('isSuperuser') === 'true';
+  const hasManageAccess = isModerator || isSuperuser;
+  const [formData, setFormData] = useState<FormData>({
     full_name: '',
-    position: '',
-    user: null,
-    email: '',
-    phone: '',
-    city: '',
-    tg_chat_id: ''
+    positions_ids: [],
   });
 
   useEffect(() => {
     const fetchData = async () => {
-      if (mode === 'edit' && id) {
-        try {
-          setLoading(true);
-          const data = await getEmployee(parseInt(id));
-          setFormData({
-            full_name: data.full_name,
-            position: data.position,
-            user: data.user,
-            email: data.email || '',
-            phone: data.phone || '',
-            city: data.city || '',
-            tg_chat_id: data.tg_chat_id || ''
+      try {
+        setLoading(true);
+        setError(null);
+
+        const [usersData, positionsData, employeeData] = await Promise.all([
+          getUsers(),
+          getPositions(),
+          id ? getEmployee(parseInt(id)) : null
+        ]);
+
+        console.log('Детальные данные:', {
+          employee: {
+            id: employeeData?.id,
+            full_name: employeeData?.full_name,
+            user: employeeData?.user,
+            user_email: employeeData?.user_email
+          },
+          users: usersData.map(u => ({
+            id: u.id,
+            email: u.email
+          }))
+        });
+
+        setUsers(usersData);
+        setPositions(positionsData);
+
+        if (employeeData) {
+          // Ищем пользователя только по email
+          const selectedUser = employeeData.user_email 
+            ? usersData.find(u => u.email === employeeData.user_email)
+            : null;
+
+          console.log('Поиск пользователя:', {
+            byEmail: employeeData.user_email ? usersData.find(u => u.email === employeeData.user_email) : null,
+            userEmail: employeeData.user_email,
+            availableEmails: usersData.map(u => u.email)
           });
-        } catch (error: any) {
-          if (error.response?.status === 401) {
-            navigate('/login', { state: { message: 'Необходима авторизация' } });
-            return;
-          }
-          if (error.response?.status === 403) {
-            setError('У вас нет прав для выполнения этого действия');
-            return;
-          }
-          setError(error.response?.data?.detail || 'Ошибка при загрузке данных');
-        } finally {
-          setLoading(false);
+
+          setFormData({
+            full_name: employeeData.full_name,
+            positions_ids: employeeData.positions.map(p => p.id),
+            user_id: selectedUser?.id || null,
+            user: selectedUser?.id || null,
+            phone: selectedUser?.phone || '',
+            city: selectedUser?.city || '',
+            tg_chat_id: selectedUser?.tg_chat_id || ''
+          });
         }
+      } catch (error: any) {
+        console.error('Error fetching data:', error);
+        if (error.response?.status === 401) {
+          navigate('/login', { state: { message: 'Необходима авторизация' } });
+          return;
+        }
+        setError(error.response?.data?.detail || 'Ошибка при загрузке данных');
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchData();
-  }, [mode, id, navigate]);
+  }, [id, navigate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setValidationErrors({});
-
-    try {
-      setLoading(true);
-      const employeeData: EmployeeFormData = {
-        full_name: formData.full_name,
-        position: formData.position,
-        user: formData.user,
-        email: formData.email || undefined,
-        phone: formData.phone || undefined,
-        city: formData.city || undefined,
-        tg_chat_id: formData.tg_chat_id || undefined
-      };
-
-      if (mode === 'create') {
-        await createEmployee(employeeData);
-      } else if (id) {
-        await updateEmployee(parseInt(id), employeeData);
-      }
-      navigate('/employees');
-    } catch (error: any) {
-      console.error('Error submitting form:', error);
-      
-      if (error.response?.status === 400) {
-        const errorData = error.response.data;
-        if (typeof errorData === 'object') {
-          setValidationErrors(errorData);
-          // Формируем список ошибок валидации
-          const errorMessages = Object.entries(errorData)
-            .flatMap(([field, errors]) => {
-              const errArray = Array.isArray(errors) ? errors : [errors];
-              
-              // Если это общая ошибка формы
-              if (field === 'non_field_errors') {
-                return errArray;
-              }
-              
-              // Для остальных полей добавляем название поля к каждой ошибке
-              const fieldName = {
-                full_name: 'ФИО',
-                position: 'Должность',
-                email: 'Email',
-                phone: 'Телефон',
-                city: 'Город',
-                tg_chat_id: 'Telegram ID'
-              }[field] || field;
-              
-              return errArray.map(err => `${fieldName}: ${err}`);
-            })
-            .filter(Boolean);
-          setError(errorMessages.join('\n'));
-        } else {
-          setError(errorData || 'Ошибка валидации формы');
-        }
-      } else if (error.response?.status === 403) {
-        setError('У вас нет прав для выполнения этого действия');
-      } else {
-        setError(error.response?.data?.detail || 'Произошла ошибка при сохранении сотрудника');
-      }
-    } finally {
-      setLoading(false);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | { name?: string; value: unknown }>) => {
+    const { name, value } = e.target;
+    if (name) {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+  const handleUserChange = (userId: number | null) => {
+    const selectedUser = users.find(u => u.id === userId);
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      user: userId,
+      user_id: userId,
+      phone: selectedUser?.phone || '',
+      city: selectedUser?.city || '',
+      tg_chat_id: selectedUser?.tg_chat_id || ''
     }));
-    // Очищаем ошибку валидации при изменении поля
-    if (validationErrors[name]) {
-      setValidationErrors(prev => ({ ...prev, [name]: [] }));
+  };
+
+  const handlePositionsChange = (event: SelectChangeEvent<number[]>) => {
+    const value = event.target.value as number[];
+    setFormData(prev => ({
+      ...prev,
+      positions_ids: value,
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setSaving(true);
+      setError(null);
+
+      const employeeData = {
+        ...formData,
+        user: formData.user_id || null
+      };
+
+      if (id) {
+        await updateEmployee(parseInt(id), employeeData);
+      } else {
+        await createEmployee(employeeData as any);
+      }
+
+      navigate('/employees');
+    } catch (error: any) {
+      console.error('Error saving employee:', error);
+      if (error.response?.status === 401) {
+        navigate('/login', { state: { message: 'Необходима авторизация' } });
+        return;
+      }
+      setError(error.response?.data?.detail || 'Ошибка при сохранении сотрудника');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -169,100 +184,123 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({ mode }) => {
   }
 
   return (
-    <Box sx={{ maxWidth: 600, mx: 'auto', p: 3 }}>
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h4" gutterBottom>
-          {mode === 'create' ? 'Создание сотрудника' : 'Редактирование сотрудника'}
-        </Typography>
+    <Paper sx={{ p: 4, maxWidth: 800, mx: 'auto', mt: 4 }}>
+      <Typography variant="h4" gutterBottom>
+        {id ? 'Редактировать сотрудника' : 'Создать сотрудника'}
+      </Typography>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 2, whiteSpace: 'pre-line' }}>
-            {error}
-          </Alert>
-        )}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
 
-        <form onSubmit={handleSubmit}>
-          <Stack spacing={3}>
-            <TextField
-              name="full_name"
-              label="ФИО"
-              value={formData.full_name || ''}
-              onChange={handleChange}
-              fullWidth
-              required
-              error={!!validationErrors.full_name}
-              helperText={validationErrors.full_name?.join('\n')}
-            />
+      <form onSubmit={handleSubmit}>
+        <Stack spacing={3}>
+          <TextField
+            required
+            fullWidth
+            label="ФИО"
+            name="full_name"
+            value={formData.full_name}
+            onChange={handleChange}
+          />
 
-            <TextField
-              name="position"
-              label="Должность"
-              value={formData.position || ''}
-              onChange={handleChange}
-              fullWidth
-              error={!!validationErrors.position}
-              helperText={validationErrors.position?.join('\n')}
-            />
+          <FormControl fullWidth margin="normal">
+            <InputLabel id="positions-label">Специализации</InputLabel>
+            <Select
+              labelId="positions-label"
+              multiple
+              value={formData.positions_ids}
+              onChange={handlePositionsChange}
+              input={<OutlinedInput label="Специализации" />}
+              renderValue={(selected) => (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {selected.map((value) => (
+                    <Chip
+                      key={value}
+                      label={positions.find(p => p.id === value)?.name || ''}
+                    />
+                  ))}
+                </Box>
+              )}
+            >
+              {positions.map((position) => (
+                <MenuItem key={position.id} value={position.id}>
+                  {position.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-            <TextField
-              name="email"
-              label="Email"
-              type="email"
-              value={formData.email || ''}
-              onChange={handleChange}
-              fullWidth
-              error={!!validationErrors.email}
-              helperText={validationErrors.email?.join('\n')}
-            />
+          <FormControl fullWidth>
+            <InputLabel>Пользователь</InputLabel>
+            <Select
+              value={formData.user_id ?? ''}
+              onChange={(e) => handleUserChange(e.target.value ? Number(e.target.value) : null)}
+              label="Пользователь"
+            >
+              <MenuItem value="">Нет пользователя</MenuItem>
+              {users.map(user => (
+                <MenuItem key={user.id} value={user.id}>
+                  {user.email}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-            <TextField
-              name="phone"
-              label="Телефон"
-              value={formData.phone || ''}
-              onChange={handleChange}
-              fullWidth
-              error={!!validationErrors.phone}
-              helperText={validationErrors.phone?.join('\n')}
-            />
+          {formData.user_id && hasManageAccess && (
+            <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Данные пользователя:
+              </Typography>
+              <Stack spacing={2}>
+                <TextField
+                  fullWidth
+                  label="Телефон"
+                  name="phone"
+                  value={formData.phone || '—'}
+                  InputProps={{ readOnly: true }}
+                />
 
-            <TextField
-              name="city"
-              label="Город"
-              value={formData.city || ''}
-              onChange={handleChange}
-              fullWidth
-              error={!!validationErrors.city}
-              helperText={validationErrors.city?.join('\n')}
-            />
+                <TextField
+                  fullWidth
+                  label="Город"
+                  name="city"
+                  value={formData.city || '—'}
+                  InputProps={{ readOnly: true }}
+                />
 
-            <TextField
-              name="tg_chat_id"
-              label="Telegram ID"
-              value={formData.tg_chat_id || ''}
-              onChange={handleChange}
-              fullWidth
-              error={!!validationErrors.tg_chat_id}
-              helperText={validationErrors.tg_chat_id?.join('\n')}
-            />
-
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-              <Button
-                variant="outlined"
-                onClick={() => navigate(-1)}
-              >
-                Отмена
-              </Button>
-              <Button
-                type="submit"
-                variant="contained"
-                disabled={loading}
-              >
-                {mode === 'create' ? 'Создать' : 'Сохранить'}
-              </Button>
+                <TextField
+                  fullWidth
+                  label="Telegram ID"
+                  name="tg_chat_id"
+                  value={formData.tg_chat_id || '—'}
+                  InputProps={{ readOnly: true }}
+                />
+              </Stack>
             </Box>
-          </Stack>
-        </form>
-      </Paper>
-    </Box>
+          )}
+
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+            <Button
+              variant="outlined"
+              onClick={() => navigate('/employees')}
+              disabled={saving}
+            >
+              Отмена
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              disabled={saving}
+            >
+              {saving ? 'Сохранение...' : 'Сохранить'}
+            </Button>
+          </Box>
+        </Stack>
+      </form>
+    </Paper>
   );
 }; 

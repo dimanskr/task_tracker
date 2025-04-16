@@ -3,20 +3,27 @@ from rest_framework.generics import (CreateAPIView, DestroyAPIView,
                                      ListAPIView, RetrieveAPIView,
                                      UpdateAPIView)
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.response import Response
+from rest_framework import status
 
 from users.models import User
 from users.permissions import IsModer, IsSelf, IsModerWithRestrictions
-from users.serializers import UserPublicSerializer, UserSerializer
+from users.serializers import (UserPublicSerializer, UserSerializer,
+                             CustomTokenObtainPairSerializer, UserRegisterSerializer,
+                             UserUpdateSerializer)
+
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
 
 
 class UserCreateAPIView(CreateAPIView):
-    serializer_class = UserSerializer
+    serializer_class = UserRegisterSerializer
     permission_classes = (AllowAny,)
 
     def perform_create(self, serializer):
-        user = serializer.save(is_active=True)
-        user.set_password(user.password)
-        user.save()
+        serializer.save()
 
 
 class UserRetrieveAPIView(RetrieveAPIView):
@@ -40,7 +47,7 @@ class UserRetrieveAPIView(RetrieveAPIView):
 
 
 class UserUpdateAPIView(UpdateAPIView):
-    serializer_class = UserSerializer
+    serializer_class = UserUpdateSerializer
     queryset = User.objects.all()
     permission_classes = (
         IsAuthenticated,
@@ -52,12 +59,18 @@ class UserUpdateAPIView(UpdateAPIView):
         if self.request.user != self.get_object():
             raise PermissionDenied("Вы можете редактировать только свой профиль.")
         # Сохраняем обновленные данные пользователя
-        user = serializer.save()
+        serializer.save()
 
-        # Хэшируем пароль, если он передан
-        if "password" in serializer.validated_data:
-            user.set_password(serializer.validated_data["password"])
-            user.save()
+    def update(self, request, *args, **kwargs):
+        response = super().update(request, *args, **kwargs)
+        
+        # Создаем новый токен
+        token = CustomTokenObtainPairSerializer.get_token(self.request.user)
+        
+        # Добавляем токен к ответу
+        response.data['access'] = str(token.access_token)
+        
+        return response
 
 
 class UserListAPIView(ListAPIView):

@@ -5,6 +5,21 @@ from users.models import User
 NULLABLE = {"null": True, "blank": True}
 
 
+class Position(models.Model):
+    """Модель специализации/должности"""
+    
+    name = models.CharField(max_length=150, verbose_name="Название специализации")
+    description = models.TextField(**NULLABLE, verbose_name="Описание специализации")
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Специализация"
+        verbose_name_plural = "Специализации"
+        ordering = ("name",)
+
+
 class Employee(models.Model):
     """Модель сотрудника"""
 
@@ -16,15 +31,15 @@ class Employee(models.Model):
         verbose_name="ФИО",
         help_text="Введите фамилию, имя и отчество",
     )
-    position = models.CharField(
-        max_length=250,
-        **NULLABLE,
-        verbose_name="Должность",
-        help_text="Укажите должность работника",
+    positions = models.ManyToManyField(
+        Position,
+        related_name="employees",
+        verbose_name="Специализации",
+        help_text="Выберите одну или несколько специализаций сотрудника"
     )
 
     def __str__(self):
-        return f"Сотрудник: {self.full_name}, должность: {self.position}"
+        return f"Сотрудник: {self.full_name}"
 
     class Meta:
         verbose_name = "Сотрудник"
@@ -58,6 +73,12 @@ class Task(models.Model):
         **NULLABLE,
         related_name="tasks",
         verbose_name="Исполнитель задачи",
+    )
+    required_positions = models.ManyToManyField(
+        Position,
+        related_name="tasks",
+        verbose_name="Требуемые специализации",
+        help_text="Выберите необходимые специализации для выполнения задачи"
     )
     deadline = models.DateTimeField(**NULLABLE, verbose_name="Срок выполнения")
     status = models.CharField(

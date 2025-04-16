@@ -5,11 +5,28 @@ from rest_framework.generics import (CreateAPIView, DestroyAPIView,
                                      UpdateAPIView)
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
-from tracker.models import Employee, Task
+from tracker.models import Employee, Task, Position
 from tracker.paginators import CustomPagination
 from tracker.serializers import (EmployeeSerializer, EmployeeTasksSerializer,
-                                 ImportantTaskSerializer, TaskSerializer)
-from users.permissions import IsModer, IsOwner
+                                 ImportantTaskSerializer, TaskSerializer, PositionSerializer)
+from users.permissions import IsModer, IsEmployeeOwner
+
+
+class PositionViewSet(viewsets.ModelViewSet):
+    """ViewSet для позиций"""
+
+    serializer_class = PositionSerializer
+    queryset = Position.objects.all()
+
+    def get_permissions(self):
+        """
+        Права доступа к эндпоинтам позиций
+        """
+        if self.action in ["create", "update", "partial_update", "destroy"]:
+            self.permission_classes = (IsAuthenticated, IsModer)
+        else:
+            self.permission_classes = (AllowAny,)
+        return super().get_permissions()
 
 
 class EmployeeViewSet(viewsets.ModelViewSet):
@@ -22,17 +39,17 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         """
         Права доступа к эндпоинтам работников
         """
-        if self.action in ["create", "destroy"]:
+        if self.action in ["destroy"]:
             self.permission_classes = (
                 IsAuthenticated,
                 IsModer,
             )
-        elif self.action in ["update", "retrieve", "partial_update"]:
+        elif self.action in ["create", "update", "partial_update"]:
             self.permission_classes = (
                 IsAuthenticated,
-                IsModer | IsOwner,
+                IsModer | IsEmployeeOwner,
             )
-        elif self.action == "list":
+        else:  # list и retrieve
             self.permission_classes = (AllowAny,)
         return super().get_permissions()
 
@@ -97,13 +114,14 @@ class ImportantTasksAPIView(ListAPIView):
 
     def get_queryset(self):
         """
-        Метод для получения всех задач с фильтрацией
-        :returns: Задачи:
-        Со статусом "new"
+        Метод для получения всех задач с фильтрацией:
+        - Со статусом "new"
         - У которых есть родительская задача
         - Родительская задача или её подзадачи в статусе "in_progress"
+        - Есть сотрудники с хотя бы одной из требуемых специализаций
         """
-        return (
+        # Получаем базовый queryset задач
+        tasks = (
             Task.objects.filter(
                 status="new",
                 parent_task__isnull=False,
@@ -114,3 +132,21 @@ class ImportantTasksAPIView(ListAPIView):
             )
             .distinct()
         )
+
+        # Фильтруем задачи, для которых есть подходящие сотрудники
+        filtered_tasks = []
+        for task in tasks:
+            required_positions = task.required_positions.all()
+            if not required_positions.exists():
+                filtered_tasks.append(task)
+                continue
+
+            # Ищем сотрудников с любой из требуемых специализаций
+            matching_employees = Employee.objects.filter(
+                positions__in=required_positions
+            ).distinct()
+            
+            if matching_employees.exists():
+                filtered_tasks.append(task)
+
+        return filtered_tasks

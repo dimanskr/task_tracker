@@ -56,7 +56,7 @@ export const UserList: React.FC = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, [navigate]);
+  }, []);
 
   const handleDeleteClick = (user: User) => {
     setUserToDelete(user);
