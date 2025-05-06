@@ -36,7 +36,7 @@ export const UserList: React.FC = () => {
       setLoading(true);
       setError(null);
       const data = await getUsers();
-      console.log('Fetched users:', data);
+      // console.log('Fetched users:', data);
       setUsers(data);
     } catch (error: any) {
       console.error('Error fetching users:', error);

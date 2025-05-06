@@ -29,9 +29,9 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       setLoading(true);
       setError(null);
       
-      console.log('Attempting login with email:', email);
+      // console.log('Attempting login with email:', email);
       const response = await login(email, password);
-      console.log('Login response:', response);
+      // console.log('Login response:', response);
 
       if (!response || typeof response !== 'object') {
         throw new Error('Некорректный ответ от сервера');
@@ -52,17 +52,17 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         throw new Error('Некорректный формат ID пользователя');
       }
 
-      console.log('Login successful. User data:', { 
-        userId, 
-        isModerator: response.is_moderator,
-        isSuperuser: response.is_superuser,
-        token: response.access 
-      });
+      // console.log('Login successful. User data:', { 
+      //   userId, 
+      //   isModerator: response.is_moderator,
+      //   isSuperuser: response.is_superuser,
+      //   token: response.access 
+      // });
       
       onLoginSuccess(userId, response.is_moderator, response.is_superuser);
       navigate(location.state?.from || '/');
     } catch (error: any) {
-      console.error('Login error:', error);
+      // console.error('Login error:', error);
       if (error.response?.status === 401) {
         setError('Неверный email или пароль');
       } else if (error.response?.status === 400) {

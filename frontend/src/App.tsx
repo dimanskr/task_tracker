@@ -133,7 +133,7 @@ function App() {
           <Route path="/user/:id" element={<UserProfile />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login onLoginSuccess={(userId, isModerator, isSuperuser) => {
-            console.log('Login success:', { userId, isModerator, isSuperuser });
+            // console.log('Login success:', { userId, isModerator, isSuperuser });
             setIsAuthenticated(true);
             if (userId) {
               localStorage.setItem('userId', userId.toString());

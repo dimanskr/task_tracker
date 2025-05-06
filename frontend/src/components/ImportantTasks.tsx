@@ -22,7 +22,7 @@ export const ImportantTasks: React.FC = () => {
       try {
         setLoading(true);
         const response = await getImportantTasks();
-        console.log('API Response:', response);
+        // console.log('API Response:', response);
         
         if (!Array.isArray(response)) {
           console.error('Response is not an array:', response);

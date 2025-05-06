@@ -42,7 +42,7 @@ export const Register: React.FC = () => {
         const positionsData = await getPositions();
         setPositions(positionsData);
       } catch (error: any) {
-        console.error('Error fetching positions:', error);
+        // console.error('Error fetching positions:', error);
         setError('Ошибка при загрузке специализаций');
       }
     };

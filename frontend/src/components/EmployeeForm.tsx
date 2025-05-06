@@ -62,18 +62,18 @@ export const EmployeeForm: React.FC = () => {
           id ? getEmployee(parseInt(id)) : null
         ]);
 
-        console.log('Детальные данные:', {
-          employee: {
-            id: employeeData?.id,
-            full_name: employeeData?.full_name,
-            user: employeeData?.user,
-            user_email: employeeData?.user_email
-          },
-          users: usersData.map(u => ({
-            id: u.id,
-            email: u.email
-          }))
-        });
+        // console.log('Детальные данные:', {
+        //   employee: {
+        //     id: employeeData?.id,
+        //     full_name: employeeData?.full_name,
+        //     user: employeeData?.user,
+        //     user_email: employeeData?.user_email
+        //   },
+        //   users: usersData.map(u => ({
+        //     id: u.id,
+        //     email: u.email
+        //   }))
+        // });
 
         setUsers(usersData);
         setPositions(positionsData);
@@ -84,11 +84,11 @@ export const EmployeeForm: React.FC = () => {
             ? usersData.find(u => u.email === employeeData.user_email)
             : null;
 
-          console.log('Поиск пользователя:', {
-            byEmail: employeeData.user_email ? usersData.find(u => u.email === employeeData.user_email) : null,
-            userEmail: employeeData.user_email,
-            availableEmails: usersData.map(u => u.email)
-          });
+          // console.log('Поиск пользователя:', {
+          //   byEmail: employeeData.user_email ? usersData.find(u => u.email === employeeData.user_email) : null,
+          //   userEmail: employeeData.user_email,
+          //   availableEmails: usersData.map(u => u.email)
+          // });
 
           setFormData({
             full_name: employeeData.full_name,
