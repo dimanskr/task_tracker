@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from users.models import User
+from tracker.models import Position
 
 
 class BaseAPITestCase(APITestCase):
@@ -26,6 +27,12 @@ class BaseAPITestCase(APITestCase):
         )
         self.moderator.groups.add(self.moder_group)
 
+        # Создаем позиции
+        self.java_position = Position.objects.create(
+            name="Java developer",
+            description="Java разработчик"
+        )
+
         # Данные для обновления профиля
         self.tg_data = {
             "tg_chat_id": "123456789",
@@ -41,10 +48,14 @@ class UserTests(BaseAPITestCase):
         data = {
             "email": "newuser@example.com",
             "password": "newpassword",
+            "phone": "+79991234567",
+            "city": "Moscow",
+            "full_name": "New User"
         }
         response = self.client.post(reverse("users:user-register"), data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(User.objects.count(), 4)
+        
 
     def test_retrieve_own_profile(self):
         """

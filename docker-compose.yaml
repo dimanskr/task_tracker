@@ -16,16 +16,16 @@ services:
       timeout: 5s
 
   app:
-    build: .
+    build: ./backend
     tty: true
     ports:
       - "8000:8000"
-    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    command: sh -c "python manage.py migrate && gunicorn --bind 0.0.0.0:8000 --workers 3 config.wsgi"
     depends_on:
       db:
         condition: service_healthy
     volumes:
-      - .:/app
+      - ./backend:/app
     env_file:
       - .env
 
