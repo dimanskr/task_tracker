@@ -14,20 +14,50 @@ services:
       interval: 10s
       retries: 5
       timeout: 5s
+    networks:
+      - app-network
 
   app:
     build: ./backend
     tty: true
-    ports:
-      - "8000:8000"
     command: sh -c "python manage.py migrate && gunicorn --bind 0.0.0.0:8000 --workers 3 config.wsgi"
     depends_on:
       db:
         condition: service_healthy
     volumes:
       - ./backend:/app
+      - static:/backend_static
     env_file:
       - .env
+    networks:
+      - app-network
+
+  frontend:
+    env_file: .env
+    build: ./frontend
+    volumes:
+      - static:/frontend_static
+    command: cp -r /app/dist/. /frontend_static/
+    networks:
+      - app-network
+
+  gateway:
+    build: ./gateway
+    volumes:
+      - static:/staticfiles/
+    ports:
+      - 8000:80
+    depends_on:
+      - app
+      - frontend
+    networks:
+      - app-network
 
 volumes:
   pg_data:
+  static:
+
+networks:
+  app-network:
+    name: task_tracker_network
+    driver: bridge

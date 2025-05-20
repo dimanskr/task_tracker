@@ -11,6 +11,10 @@
 и своевременном выполнении ключевых задач.**
 
 ### Тэги проекта:
+
+![Fullstack](https://img.shields.io/badge/Fullstack-Django%20%7C%20React-092E20?logo=django&logoColor=white)
+![React](https://img.shields.io/badge/React-14-61DAFB?logo=react&logoColor=white)
+![Nginx](https://img.shields.io/badge/Nginx-1.22-009639?logo=nginx&logoColor=white)
 ![Python](https://img.shields.io/badge/python-3.11-blue)
 ![Django](https://img.shields.io/badge/django-5.1.4-green)
 ![DRF](https://img.shields.io/badge/DRF-3.15.2-blue)
@@ -54,14 +58,19 @@
    ``` bash
    docker-compose up -d --build
    ```
+### 4/ Соберите статику Django
+``` bash
+docker compose exec backend python manage.py collectstatic
+docker compose exec backend cp -r /app/collected_static/. /backend_static/static/ 
+```
 
-### 4. Создайте учетную запись администратора:
+### 5. Создайте учетную запись администратора:
    ``` bash
    docker-compose exec app python manage.py createsuperuser
    ```
    Введите регистрационные данные и зайдите в админку: http://127.0.0.1:8000/admin/*
 
-### 5. Создайте в административной панели группу модераторов или выполните для этого команду:
+### 6. Создайте в административной панели группу модераторов или выполните для этого команду:
    ``` bash
    docker-compose exec app python manage.py loaddata users/fixtures/groups.json
    ```
