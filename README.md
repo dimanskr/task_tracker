@@ -58,17 +58,17 @@
    ``` bash
    docker-compose up -d --build
    ```
-### 4/ Соберите статику Django
+### 4. Соберите статику Django
 ``` bash
-docker compose exec backend python manage.py collectstatic
-docker compose exec backend cp -r /app/collected_static/. /backend_static/static/ 
+docker compose exec app python manage.py collectstatic
+docker compose exec app cp -r /app/collected_static/. /backend_static/static/ 
 ```
 
 ### 5. Создайте учетную запись администратора:
    ``` bash
    docker-compose exec app python manage.py createsuperuser
    ```
-   Введите регистрационные данные и зайдите в админку: http://127.0.0.1:8000/admin/*
+   Введите регистрационные данные и зайдите в админку: http://127.0.0.1:8000/admin/
 
 ### 6. Создайте в административной панели группу модераторов или выполните для этого команду:
    ``` bash
