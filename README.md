@@ -51,7 +51,8 @@
     cp .env.sample .env
    ```
 Пропишите в нём настройки подключения к базе данных (минимум POSTGRES_DB) 
-([шаблон файла .env](.env.sample)), параметры DEBUG и в ALLOWED_HOSTS пропишите IP хостинга и доменное имя
+([шаблон файла .env](.env.sample)), параметры DEBUG и в ALLOWED_HOSTS пропишите IP хостинга и доменное имя. 
+Так же доменное имя нужно прописать в файле  frontend/api/index.ts в переменной baseURL: 'https://domain-name/api/' для доступа фронтенда к бэкенду
 
 ### 3. Запустите docker-compose:
 

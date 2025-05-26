@@ -6,7 +6,9 @@ import {
   Typography, 
   Container, 
   Button,
-  Box
+  Box,
+  useMediaQuery,
+  useTheme
 } from '@mui/material'
 import { TaskList } from './components/TaskList'
 import { EmployeeList } from './components/EmployeeList'
@@ -21,11 +23,19 @@ import { TaskView } from './components/TaskView'
 import { UserList } from './components/UserList'
 import { UserProfile } from './components/UserProfile'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import { MobileMenu } from './components/MobileMenu'
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
   const isModerator = localStorage.getItem('isModerator') === 'true';
   const isSuperuser = localStorage.getItem('isSuperuser') === 'true';
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
+  };
 
   const handleLogout = () => {
     removeAuthToken();
@@ -35,66 +45,48 @@ function App() {
     setIsAuthenticated(false);
   };
 
+  const menuItems = [
+    { text: 'Задачи', path: '/' },
+    { text: 'Сотрудники', path: '/employees' },
+    { text: 'Важные задачи', path: '/important' },
+    { text: 'Занятость', path: '/employees-tasks' },
+    ...(isModerator || isSuperuser ? [{ text: 'Пользователи', path: '/users' }] : []),
+    ...(isAuthenticated ? [
+      { text: 'Мой профиль', path: `/user/${localStorage.getItem('userId')}` },
+      { text: 'Выйти', onClick: handleLogout }
+    ] : [
+      { text: 'Регистрация', path: '/register' },
+      { text: 'Войти', path: '/login' }
+    ])
+  ];
+
   return (
     <Router>
       <AppBar position="static">
         <Toolbar>
+          <MobileMenu 
+            menuItems={menuItems}
+            onDrawerToggle={handleDrawerToggle}
+            mobileOpen={mobileOpen}
+          />
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             Task Tracker
           </Typography>
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button color="inherit" component={Link} to="/">
-              Задачи
-            </Button>
-            <Button color="inherit" component={Link} to="/employees">
-              Сотрудники
-            </Button>
-            <Button color="inherit" component={Link} to="/important">
-              Важные задачи
-            </Button>
-            <Button color="inherit" component={Link} to="/employees-tasks">
-              Занятость
-            </Button>
-            {(isModerator || isSuperuser) && (
-              <Button color="inherit" component={Link} to="/users">
-                Пользователи
-              </Button>
-            )}
-            {isAuthenticated ? (
-              <>
-                <Button 
-                  color="inherit" 
-                  component={Link} 
-                  to={`/user/${localStorage.getItem('userId')}`}
+          {!isMobile && (
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              {menuItems.map((item) => (
+                <Button
+                  key={item.text}
+                  color="inherit"
+                  component={item.onClick ? 'button' : Link}
+                  to={item.path}
+                  onClick={item.onClick}
                 >
-                  Мой профиль
+                  {item.text}
                 </Button>
-                <Button 
-                  color="inherit" 
-                  onClick={handleLogout}
-                >
-                  Выйти
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button 
-                  color="inherit" 
-                  component={Link} 
-                  to="/register"
-                >
-                  Регистрация
-                </Button>
-                <Button 
-                  color="inherit" 
-                  component={Link} 
-                  to="/login"
-                >
-                  Войти
-                </Button>
-              </>
-            )}
-          </Box>
+              ))}
+            </Box>
+          )}
         </Toolbar>
       </AppBar>
 
@@ -115,12 +107,12 @@ function App() {
           <Route path="/employees" element={<EmployeeList />} />
           <Route path="/employee/create" element={
             <ProtectedRoute requiresModeration>
-              <EmployeeForm mode="create" />
+              <EmployeeForm />
             </ProtectedRoute>
           } />
           <Route path="/employee/update/:id" element={
             <ProtectedRoute requiresModeration>
-              <EmployeeForm mode="edit" />
+              <EmployeeForm />
             </ProtectedRoute>
           } />
           <Route path="/important" element={<ImportantTasks />} />
@@ -133,7 +125,6 @@ function App() {
           <Route path="/user/:id" element={<UserProfile />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login onLoginSuccess={(userId, isModerator, isSuperuser) => {
-            // console.log('Login success:', { userId, isModerator, isSuperuser });
             setIsAuthenticated(true);
             if (userId) {
               localStorage.setItem('userId', userId.toString());

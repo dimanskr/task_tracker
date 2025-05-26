@@ -100,7 +100,18 @@ export const ImportantTasks: React.FC = () => {
                 <Typography variant="subtitle2" sx={{ mt: 2 }}>
                   Рекомендуемые сотрудники:
                 </Typography>
-                <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                <Stack 
+                  direction="row" 
+                  spacing={1} 
+                  sx={{ 
+                    mt: 1,
+                    flexWrap: 'wrap',
+                    gap: 1,
+                    '& .MuiChip-root': {
+                      maxWidth: '200px'
+                    }
+                  }}
+                >
                   {task.executors.map((employee, idx) => (
                     <Chip 
                       key={idx} 
