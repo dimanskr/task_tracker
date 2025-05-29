@@ -1,4 +1,5 @@
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Case, When, Value, BooleanField, F
+from django.utils import timezone
 from rest_framework import viewsets
 from rest_framework.generics import (CreateAPIView, DestroyAPIView,
                                      ListAPIView, RetrieveAPIView,
@@ -61,6 +62,52 @@ class TaskListAPIView(ListAPIView):
     queryset = Task.objects.all()
     pagination_class = CustomPagination
     permission_classes = (AllowAny,)
+
+    def get_queryset(self):
+        queryset = Task.objects.all()
+        
+        # Фильтрация по статусу
+        status = self.request.query_params.get('status')
+        if status:
+            queryset = queryset.filter(status=status)
+            
+        # Сортировка по дедлайну
+        sort_order = self.request.query_params.get('sort_order')
+        if sort_order:
+            if sort_order == 'asc':
+                queryset = queryset.order_by('deadline')
+            elif sort_order == 'desc':
+                queryset = queryset.order_by('-deadline')
+        else:
+            # Сортировка по умолчанию:
+            # 1. Сначала активные задачи
+            # 2. Затем завершенные и отмененные задачи
+            # 3. Внутри активных: родительская задача сразу за ней её подзадачи
+            current_time = timezone.now()
+            queryset = queryset.annotate(
+                is_parent=Case(
+                    When(parent_task__isnull=True, then=Value(True)),
+                    default=Value(False),
+                    output_field=BooleanField(),
+                ),
+                is_completed_or_canceled=Case(
+                    When(status__in=['completed', 'canceled'], then=Value(True)),
+                    default=Value(False),
+                    output_field=BooleanField(),
+                ),
+                parent_id=Case(
+                    When(parent_task__isnull=True, then=F('id')),
+                    default=F('parent_task'),
+                    output_field=BooleanField(),
+                )
+            ).order_by(
+                'is_completed_or_canceled',  # Сначала активные задачи
+                'parent_id',  # Группируем по родительской задаче
+                '-is_parent',  # Сначала родительская задача
+                'deadline'  # Сортируем по дедлайну
+            )
+                
+        return queryset
 
 
 class TaskRetrieveAPIView(RetrieveAPIView):

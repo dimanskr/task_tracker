@@ -100,6 +100,43 @@ export const TaskForm: React.FC<TaskFormProps> = ({ mode }) => {
       setError(null);
       setValidationErrors({});
 
+      // Валидация дедлайна
+      if (formData.deadline) {
+        const deadline = new Date(formData.deadline);
+        const now = new Date();
+        if (deadline < now) {
+          setValidationErrors(prev => ({
+            ...prev,
+            deadline: ['Дедлайн должен быть больше или равен текущей дате']
+          }));
+          setLoading(false);
+          return;
+        }
+
+        // Валидация дедлайна с родительской задачей
+        if (formData.parent_task) {
+          const parentTask = availableTasks.find(t => t.id === formData.parent_task);
+          if (parentTask?.deadline && deadline > new Date(parentTask.deadline)) {
+            setValidationErrors(prev => ({
+              ...prev,
+              deadline: ['Дедлайн задачи должен быть меньше или равен дедлайну родительской задачи']
+            }));
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
+      // Валидация статуса при создании
+      if (mode === 'create' && formData.status && !['new', 'in_progress'].includes(formData.status)) {
+        setValidationErrors(prev => ({
+          ...prev,
+          status: ['Задача при создании может иметь только статус "Новая" или "В работе"']
+        }));
+        setLoading(false);
+        return;
+      }
+
       const { executor_id, required_positions_ids, ...rest } = formData;
       const taskData = {
         ...rest,
@@ -125,10 +162,12 @@ export const TaskForm: React.FC<TaskFormProps> = ({ mode }) => {
         setError('У вас нет прав для выполнения этого действия');
         return;
       }
-      if (error.response?.data?.detail) {
-        setError(error.response.data.detail);
-      } else if (error.response?.data) {
-        setValidationErrors(error.response.data);
+      if (error.response?.data) {
+        if (typeof error.response.data === 'object' && !error.response.data.detail) {
+          setValidationErrors(error.response.data);
+        } else {
+          setError(error.response.data.detail || 'Произошла ошибка при сохранении задачи');
+        }
       } else {
         setError('Произошла ошибка при сохранении задачи');
       }
@@ -208,7 +247,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ mode }) => {
             name="deadline"
             label="Дедлайн"
             type="datetime-local"
-            value={formData.deadline ? formData.deadline.slice(0, 16) : ''}
+            value={formData.deadline || ''}
             onChange={handleTextChange}
             fullWidth
             InputLabelProps={{ shrink: true }}
@@ -216,14 +255,11 @@ export const TaskForm: React.FC<TaskFormProps> = ({ mode }) => {
             helperText={validationErrors.deadline?.join('\n')}
           />
 
-          <FormControl 
-            fullWidth
-            error={!!validationErrors.status}
-          >
+          <FormControl fullWidth error={!!validationErrors.status}>
             <InputLabel>Статус</InputLabel>
             <Select
               name="status"
-              value={formData.status || 'new'}
+              value={formData.status || ''}
               onChange={handleSelectChange}
               label="Статус"
             >
@@ -233,16 +269,11 @@ export const TaskForm: React.FC<TaskFormProps> = ({ mode }) => {
               <MenuItem value="canceled">Отменена</MenuItem>
             </Select>
             {validationErrors.status && (
-              <FormHelperText>
-                {validationErrors.status.join('\n')}
-              </FormHelperText>
+              <FormHelperText>{validationErrors.status.join('\n')}</FormHelperText>
             )}
           </FormControl>
 
-          <FormControl 
-            fullWidth
-            error={!!validationErrors.executor}
-          >
+          <FormControl fullWidth error={!!validationErrors.executor_id}>
             <InputLabel>Исполнитель</InputLabel>
             <Select
               name="executor_id"
@@ -251,59 +282,18 @@ export const TaskForm: React.FC<TaskFormProps> = ({ mode }) => {
               label="Исполнитель"
             >
               <MenuItem value="">Не назначен</MenuItem>
-              {employees.map(employee => (
+              {employees.map((employee) => (
                 <MenuItem key={employee.id} value={employee.id}>
                   {employee.full_name}
                 </MenuItem>
               ))}
             </Select>
-            {validationErrors.executor && (
-              <FormHelperText>
-                {validationErrors.executor.join('\n')}
-              </FormHelperText>
+            {validationErrors.executor_id && (
+              <FormHelperText>{validationErrors.executor_id.join('\n')}</FormHelperText>
             )}
           </FormControl>
 
-          <FormControl 
-            fullWidth
-            error={!!validationErrors.required_positions}
-          >
-            <InputLabel>Требуемые специализации</InputLabel>
-            <Select
-              name="required_positions_ids"
-              multiple
-              value={formData.required_positions_ids || []}
-              onChange={handleSelectChange}
-              input={<OutlinedInput label="Требуемые специализации" />}
-              renderValue={(selected) => (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                  {(selected as number[]).map((value) => (
-                    <Chip
-                      key={value}
-                      label={positions.find(p => p.id === value)?.name || ''}
-                      size="small"
-                    />
-                  ))}
-                </Box>
-              )}
-            >
-              {positions.map(position => (
-                <MenuItem key={position.id} value={position.id}>
-                  {position.name}
-                </MenuItem>
-              ))}
-            </Select>
-            {validationErrors.required_positions && (
-              <FormHelperText>
-                {validationErrors.required_positions.join('\n')}
-              </FormHelperText>
-            )}
-          </FormControl>
-
-          <FormControl 
-            fullWidth
-            error={!!validationErrors.parent_task}
-          >
+          <FormControl fullWidth error={!!validationErrors.parent_task}>
             <InputLabel>Родительская задача</InputLabel>
             <Select
               name="parent_task"
@@ -311,17 +301,47 @@ export const TaskForm: React.FC<TaskFormProps> = ({ mode }) => {
               onChange={handleSelectChange}
               label="Родительская задача"
             >
-              <MenuItem value="">Нет родительской задачи</MenuItem>
-              {availableTasks.map(task => (
-                <MenuItem key={task.id} value={task.id}>
-                  {task.title}
+              <MenuItem value="">Нет</MenuItem>
+              {availableTasks
+                .filter(task => task.id !== parseInt(id || '0'))
+                .map((task) => (
+                  <MenuItem key={task.id} value={task.id}>
+                    {task.title}
+                  </MenuItem>
+                ))}
+            </Select>
+            {validationErrors.parent_task && (
+              <FormHelperText>{validationErrors.parent_task.join('\n')}</FormHelperText>
+            )}
+          </FormControl>
+
+          <FormControl fullWidth error={!!validationErrors.required_positions_ids}>
+            <InputLabel>Требуемые специализации</InputLabel>
+            <Select
+              multiple
+              name="required_positions_ids"
+              value={formData.required_positions_ids || []}
+              onChange={handleSelectChange}
+              input={<OutlinedInput label="Требуемые специализации" />}
+              renderValue={(selected) => (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {selected.map((value) => {
+                    const position = positions.find(p => p.id === value);
+                    return (
+                      <Chip key={value} label={position?.name || value} />
+                    );
+                  })}
+                </Box>
+              )}
+            >
+              {positions.map((position) => (
+                <MenuItem key={position.id} value={position.id}>
+                  {position.name}
                 </MenuItem>
               ))}
             </Select>
-            {validationErrors.parent_task && (
-              <FormHelperText>
-                {validationErrors.parent_task.join('\n')}
-              </FormHelperText>
+            {validationErrors.required_positions_ids && (
+              <FormHelperText>{validationErrors.required_positions_ids.join('\n')}</FormHelperText>
             )}
           </FormControl>
 

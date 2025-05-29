@@ -22,7 +22,8 @@ interface TaskCreateUpdateData {
 
 // Конфигурация axios
 const api = axios.create({
-  baseURL: 'http://localhost:8000/api/', // заменить на URL API 'https://domain-name/api/'
+  // @ts-ignore
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api/',
   headers: {
     'Content-Type': 'application/json',
   }
@@ -46,6 +47,10 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Удаляем токен при получении 401 ошибки
       localStorage.removeItem('token');
+    }
+    // Проверяем, что ответ - это JSON
+    if (error.response?.headers['content-type']?.includes('text/html')) {
+      console.error('API вернул HTML вместо JSON. Проверьте URL и доступность сервера');
     }
     return Promise.reject(error);
   }

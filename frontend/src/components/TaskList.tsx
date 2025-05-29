@@ -66,7 +66,7 @@ const formatDateTime = (dateString: string) => {
   });
 };
 
-const TASKS_PER_PAGE = 20;
+const TASKS_PER_PAGE = 10;
 
 type SortField = 'deadline' | 'status' | null;
 type SortOrder = 'asc' | 'desc';
@@ -110,7 +110,19 @@ export const TaskList: React.FC = () => {
   const fetchTasks = async (page: number = 1) => {
     try {
       setLoading(true);
-      const data = await getTasks(`task-list/?page=${page}`);
+      let url = `task-list/?page=${page}`;
+      
+      // Добавляем параметры сортировки в URL
+      if (sortField === 'deadline') {
+        url += `&sort_order=${sortOrder}`;
+      }
+      
+      // Фильтрация по статусу (независимо от сортировки)
+      if (selectedStatus) {
+        url += `&status=${selectedStatus}`;
+      }
+      
+      const data = await getTasks(url);
       
       if (!data || !data.results) {
         console.error('Received invalid data:', data);
@@ -118,15 +130,7 @@ export const TaskList: React.FC = () => {
         return;
       }
       
-      const sortedTasks = data.results.sort((a, b) => {
-        if (a.parent_task === null && b.parent_task !== null) return -1;
-        if (a.parent_task !== null && b.parent_task === null) return 1;
-        const dateA = a.deadline ? new Date(a.deadline).getTime() : 0;
-        const dateB = b.deadline ? new Date(b.deadline).getTime() : 0;
-        return dateA - dateB;
-      });
-      
-      setTasks(sortedTasks);
+      setTasks(data.results);
       setTotalPages(data.total_pages);
       setCurrentPage(data.current_page);
       setError(null);
@@ -153,8 +157,8 @@ export const TaskList: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchTasks(1);
-  }, [navigate]);
+    fetchTasks(currentPage);
+  }, [currentPage, sortField, sortOrder, selectedStatus]);
 
   const handlePageChange = (event: React.ChangeEvent<unknown>, page: number) => {
     fetchTasks(page);
@@ -188,6 +192,7 @@ export const TaskList: React.FC = () => {
       setSortField(field);
       setSortOrder('asc');
     }
+    setCurrentPage(1);
   };
 
   const handleDeleteClick = (task: Task) => {
@@ -201,7 +206,14 @@ export const TaskList: React.FC = () => {
     try {
       setLoading(true);
       await deleteTask(taskToDelete.id);
-      await fetchTasks(currentPage);
+      
+      // Если на текущей странице осталась только одна задача, переходим на предыдущую страницу
+      if (tasks.length === 1 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      } else {
+        await fetchTasks(currentPage);
+      }
+      
       setDeleteDialogOpen(false);
       setTaskToDelete(null);
     } catch (error: any) {
@@ -246,16 +258,6 @@ export const TaskList: React.FC = () => {
     );
   }
 
-  if (!tasks.length) {
-    return (
-      <Typography variant="h6" align="center" sx={{ mt: 4 }}>
-        Нет доступных задач
-      </Typography>
-    );
-  }
-
-  const sortedTasks = sortTasks(tasks);
-
   return (
     <div>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -286,6 +288,7 @@ export const TaskList: React.FC = () => {
               } else {
                 setSortField(null);
               }
+              setCurrentPage(1);
             }}
           >
             <MenuItem value="">Без сортировки</MenuItem>
@@ -308,6 +311,7 @@ export const TaskList: React.FC = () => {
                 setSortField(null);
                 setSelectedStatus(null);
               }
+              setCurrentPage(1);
             }}
           >
             <MenuItem value="">Все статусы</MenuItem>
@@ -320,153 +324,168 @@ export const TaskList: React.FC = () => {
         </FormControl>
       </Stack>
 
-      <TableContainer component={Paper} sx={{ mb: 3 }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell width="25%">Название</TableCell>
-              <TableCell width="20%">Описание</TableCell>
-              <TableCell width="10%">Статус</TableCell>
-              <TableCell width="15%">Дедлайн</TableCell>
-              <TableCell width="10%">Исполнитель</TableCell>
-              <TableCell width="10%">Специализации</TableCell>
-              {hasManageAccess && <TableCell width="10%">Действия</TableCell>}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {sortedTasks.map((task) => (
-              <TableRow 
-                key={task.id}
-                sx={{
-                  backgroundColor: task.parent_task ? 'rgba(0, 0, 0, 0.02)' : 'inherit',
-                  '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                  }
-                }}
-              >
-                <TableCell>
-                  <Box sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center',
-                    pl: task.parent_task ? 2 : 0
-                  }}>
-                    {task.parent_task && (
-                      <span style={{ 
-                        marginRight: '0.5rem', 
-                        color: '#666',
-                        fontSize: '1.2rem'
-                      }}>
-                        ↳
-                      </span>
-                    )}
-                    <Link
-                      component={RouterLink}
-                      to={`/task/${task.id}`}
-                      sx={{
-                        textDecoration: 'none',
-                        color: 'primary.main',
-                        '&:hover': {
-                          textDecoration: 'underline'
-                        }
-                      }}
-                    >
-                      <Typography
-                        variant="body1"
-                        sx={{
-                          fontWeight: task.parent_task ? 'normal' : 'medium',
-                          color: 'inherit'
-                        }}
-                      >
-                        {task.title}
-                      </Typography>
-                    </Link>
-                  </Box>
-                </TableCell>
-                <TableCell>
-                  <Typography
-                    variant="body2"
+      {!tasks.length ? (
+        <Typography variant="h6" align="center" sx={{ mt: 4 }}>
+          Нет доступных задач
+        </Typography>
+      ) : (
+        <>
+          <TableContainer component={Paper} sx={{ mb: 3 }}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell width="25%">Название</TableCell>
+                  <TableCell width="20%">Описание</TableCell>
+                  <TableCell width="10%">Статус</TableCell>
+                  <TableCell width="15%">Дедлайн</TableCell>
+                  <TableCell width="10%">Исполнитель</TableCell>
+                  <TableCell width="10%">Специализации</TableCell>
+                  {hasManageAccess && <TableCell width="10%">Действия</TableCell>}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {tasks.map((task) => (
+                  <TableRow 
+                    key={task.id}
                     sx={{
-                      color: 'text.secondary',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden'
+                      backgroundColor: task.parent_task ? 'rgba(0, 0, 0, 0.02)' : 'inherit',
+                      '&:hover': {
+                        backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                      }
                     }}
                   >
-                    {task.description}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Chip 
-                    label={getStatusLabel(task.status)}
-                    color={getStatusColor(task.status) as any}
-                    size="small"
-                    sx={{ minWidth: '90px' }}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2">
-                    {task.deadline ? formatDateTime(task.deadline) : '—'}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2">
-                    {task.executor ? task.executor.full_name : '—'}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Stack direction="row" spacing={0.5} flexWrap="wrap">
-                    {task.required_positions.map((position) => (
-                      <Chip
-                        key={position.id}
-                        label={position.name}
+                    <TableCell>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center',
+                        pl: task.parent_task ? 2 : 0
+                      }}>
+                        {task.parent_task && (
+                          <span style={{ 
+                            marginRight: '0.5rem', 
+                            color: '#666',
+                            fontSize: '1.2rem'
+                          }}>
+                            ↳
+                          </span>
+                        )}
+                        <Link
+                          component={RouterLink}
+                          to={`/task/${task.id}`}
+                          sx={{
+                            textDecoration: 'none',
+                            color: 'primary.main',
+                            '&:hover': {
+                              textDecoration: 'underline'
+                            }
+                          }}
+                        >
+                          <Typography
+                            variant="body1"
+                            sx={{
+                              fontWeight: task.parent_task ? 'normal' : 'medium',
+                              color: 'inherit'
+                            }}
+                          >
+                            {task.title}
+                          </Typography>
+                        </Link>
+                        <Chip
+                          label={`${task.parent_task || task.id}`}
+                          size="small"
+                          color="default"
+                          variant="outlined"
+                          sx={{ ml: 1 }}
+                        />
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: 'text.secondary',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }}
+                      >
+                        {task.description}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={getStatusLabel(task.status)}
+                        color={getStatusColor(task.status) as any}
                         size="small"
-                        color="secondary"
-                        variant="outlined"
-                        sx={{ mb: 0.5 }}
+                        sx={{ minWidth: '90px' }}
                       />
-                    ))}
-                  </Stack>
-                </TableCell>
-                {hasManageAccess && (
-                  <TableCell>
-                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() => navigate(`/task/update/${task.id}`)}
-                      >
-                        Изменить
-                      </Button>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        color="error"
-                        onClick={() => handleDeleteClick(task)}
-                      >
-                        Удалить
-                      </Button>
-                    </Box>
-                  </TableCell>
-                )}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 4 }}>
-        <Pagination 
-          count={totalPages}
-          page={currentPage}
-          onChange={handlePageChange}
-          color="primary"
-          size="large"
-          showFirstButton
-          showLastButton
-          siblingCount={2}
-          boundaryCount={1}
-        />
-      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {task.deadline ? formatDateTime(task.deadline) : '—'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {task.executor ? task.executor.full_name : '—'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                        {task.required_positions.map((position) => (
+                          <Chip
+                            key={position.id}
+                            label={position.name}
+                            size="small"
+                            color="secondary"
+                            variant="outlined"
+                            sx={{ mb: 0.5 }}
+                          />
+                        ))}
+                      </Stack>
+                    </TableCell>
+                    {hasManageAccess && (
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => navigate(`/task/update/${task.id}`)}
+                          >
+                            Изменить
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="error"
+                            onClick={() => handleDeleteClick(task)}
+                          >
+                            Удалить
+                          </Button>
+                        </Box>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 4 }}>
+            <Pagination 
+              count={totalPages}
+              page={currentPage}
+              onChange={handlePageChange}
+              color="primary"
+              size="large"
+              showFirstButton
+              showLastButton
+              siblingCount={2}
+              boundaryCount={1}
+            />
+          </Box>
+        </>
+      )}
 
       <Dialog
         open={deleteDialogOpen}

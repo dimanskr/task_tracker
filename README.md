@@ -39,7 +39,7 @@
 ## Установка и запуск
 
 *На компьютере или сервере должен быть установлен и запущен Docker и docker-compose 
-(инструкции по установке и запуску на сайте https://www.docker.com/)!*
+(инструкции по установке и запуску на сайте https://www.docker.com/), nginx*
 
 ### 1. Клонируйте репозиторий с проектом:
    ```bash
@@ -47,12 +47,36 @@
    cd task_tracker
    ```
 ### 2. Скопируйте файл `env.sample` в `.env`:
+
+Пропишите в нём настройки подключения к базе данных (минимум POSTGRES_DB) 
+([шаблон файла .env](.env.sample)), параметры DEBUG и в ALLOWED_HOSTS пропишите IP хостинга и доменное имя. 
+
+### 2. Настройка переменных окружения:
+#### Backend (.env):
+Скопируйте файл `env.sample` в `.env`:
+
    ```bash
     cp .env.sample .env
    ```
-Пропишите в нём настройки подключения к базе данных (минимум POSTGRES_DB) 
-([шаблон файла .env](.env.sample)), параметры DEBUG и в ALLOWED_HOSTS пропишите IP хостинга и доменное имя. 
-Так же доменное имя нужно прописать в файле  frontend/api/index.ts в переменной baseURL: 'https://domain-name/api/' для доступа фронтенда к бэкенду
+Пропишите в нём:
+- Настройки подключения к базе данных (POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD)
+- DEBUG=False
+- SECRET_KEY=your-secret-key
+- ALLOWED_HOSTS=your-domain.com,localhost,<IP хостинга>
+- CORS_ALLOWED_ORIGINS=https://your-domain.com,https://<IP хостинга>,http://localhost:8000
+[шаблон файла .env](.env.sample)
+
+#### Frontend (.env) в папке frontend:
+Скопируйте файл `env.sample` в `.env`:
+
+   ```bash
+    cd frontend
+    cp .env.sample .env
+    cd ..
+   ```
+   Пропишите доменное имя для доступа frontend к backend:
+- VITE_API_URL=http://localhost:8000/api (для разработки)
+- VITE_API_URL=https://your-domain.com/api (для продакшена)
 
 ### 3. Запустите docker-compose:
 
@@ -69,14 +93,11 @@ docker compose exec app cp -r /app/collected_static/. /backend_static/static/
    ``` bash
    docker-compose exec app python manage.py createsuperuser
    ```
-   Введите регистрационные данные и зайдите в админку: http://127.0.0.1:8000/admin/
 
-### 6. Создайте в административной панели группу модераторов или выполните для этого команду:
+### 6. Создайте группу модераторов, выполните для этого команду:
    ``` bash
    docker-compose exec app python manage.py loaddata users/fixtures/groups.json
    ```
-> [!IMPORTANT]
-> Группа должна называться "moderators".
 
 ### 6. Зарегистрируйте нового пользователя и назначите ему права модератора в админке.
 
@@ -90,7 +111,7 @@ docker compose exec app cp -r /app/collected_static/. /backend_static/static/
 
 ## Автодокументация API:
 
-| Path                               | Methods | Description                 | Permissions |
-|------------------------------------|---------|-----------------------------|-------------|
-| http://127.0.0.1:8000/api/swagger/ | `GET`   | документация по API Swagger | AllowAny    |
-| http://127.0.0.1:8000/api/redoc/   | `GET`   | документация по API redoc   | AllowAny    |
+| Path          | Methods | Description                 | Permissions |
+|---------------|---------|-----------------------------|-------------|
+| /api/swagger/ | `GET`   | документация по API Swagger | AllowAny    |
+| /api/redoc/   | `GET`   | документация по API redoc   | AllowAny    |

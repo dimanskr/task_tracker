@@ -8,7 +8,8 @@ import {
   Button,
   Box,
   useMediaQuery,
-  useTheme
+  useTheme,
+  Avatar
 } from '@mui/material'
 import { TaskList } from './components/TaskList'
 import { EmployeeList } from './components/EmployeeList'
@@ -69,11 +70,22 @@ function App() {
             onDrawerToggle={handleDrawerToggle}
             mobileOpen={mobileOpen}
           />
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Task Tracker
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Avatar 
+              src="/favicon.svg" 
+              alt="Task Tracker"
+              sx={{ 
+                width: 32, 
+                height: 32,
+                bgcolor: 'transparent'
+              }}
+            />
+            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+              Task Tracker
+            </Typography>
+          </Box>
           {!isMobile && (
-            <Box sx={{ display: 'flex', gap: 2 }}>
+            <Box sx={{ display: 'flex', gap: 2, ml: 'auto' }}>
               {menuItems.map((item) => (
                 <Button
                   key={item.text}
