@@ -10,11 +10,16 @@ import {
   Divider,
   Grid,
   Link,
-  Stack
+  Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions
 } from '@mui/material';
 import { useNavigate, useParams, Link as RouterLink } from 'react-router-dom';
 import { Task } from '../types';
-import { getTask } from '../api';
+import { getTask, deleteTask } from '../api';
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -59,12 +64,16 @@ const formatDateTime = (dateString: string) => {
 
 export const TaskView: React.FC = () => {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const [task, setTask] = useState<Task | null>(null);
   const [parentTask, setParentTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const isAuthenticated = !!localStorage.getItem('token');
+  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const isModerator = localStorage.getItem('isModerator') === 'true';
+  const isSuperuser = localStorage.getItem('isSuperuser') === 'true';
+  const hasManageAccess = isModerator || isSuperuser;
 
   useEffect(() => {
     const fetchTaskData = async () => {
@@ -94,6 +103,25 @@ export const TaskView: React.FC = () => {
     fetchTaskData();
   }, [id]);
 
+  const handleDelete = async () => {
+    if (!task) return;
+
+    try {
+      await deleteTask(task.id);
+      navigate('/');
+    } catch (error: any) {
+      console.error('Error deleting task:', error);
+      if (error.response?.status === 401) {
+        navigate('/login', { state: { message: 'Необходима авторизация' } });
+      } else if (error.response?.status === 403) {
+        setError('У вас нет прав для удаления задачи');
+      } else {
+        setError(error.response?.data?.detail || 'Ошибка при удалении задачи');
+      }
+    }
+    setDeleteDialogOpen(false);
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
@@ -120,7 +148,14 @@ export const TaskView: React.FC = () => {
 
   return (
     <Paper sx={{ p: 4, maxWidth: 800, mx: 'auto', mt: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: { xs: 'column', sm: 'row' },
+        justifyContent: 'space-between', 
+        alignItems: { xs: 'stretch', sm: 'center' }, 
+        gap: 2,
+        mb: 3 
+      }}>
         <Box>
           <Typography variant="h4" gutterBottom>
             {task.title}
@@ -131,14 +166,30 @@ export const TaskView: React.FC = () => {
             sx={{ mb: 2 }}
           />
         </Box>
-        {isAuthenticated && (
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => navigate(`/task/update/${task.id}`)}
-          >
-            Редактировать
-          </Button>
+        {hasManageAccess && (
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: 2,
+            width: { xs: '100%', sm: 'auto' }
+          }}>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => navigate(`/task/update/${task.id}`)}
+              fullWidth={false}
+            >
+              Редактировать
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={() => setDeleteDialogOpen(true)}
+              fullWidth={false}
+            >
+              Удалить
+            </Button>
+          </Box>
         )}
       </Box>
 
@@ -177,7 +228,17 @@ export const TaskView: React.FC = () => {
             Требуемые специализации
           </Typography>
           {task.required_positions.length > 0 ? (
-            <Stack direction="row" spacing={1}>
+            <Stack 
+              direction="row" 
+              spacing={1} 
+              sx={{ 
+                flexWrap: 'wrap',
+                gap: 1,
+                '& .MuiChip-root': {
+                  mb: 1
+                }
+              }}
+            >
               {task.required_positions.map((position) => (
                 <Chip
                   key={position.id}
@@ -235,6 +296,35 @@ export const TaskView: React.FC = () => {
           Вернуться к списку
         </Button>
       </Box>
+
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+      >
+        <DialogTitle>Подтверждение удаления</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Вы действительно хотите удалить задачу "{task?.title}"?
+            {task?.executor && (
+              <Typography color="error" sx={{ mt: 1 }}>
+                Внимание: У этой задачи есть назначенный исполнитель.
+              </Typography>
+            )}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>
+            Отмена
+          </Button>
+          <Button 
+            onClick={handleDelete} 
+            color="error" 
+            variant="contained"
+          >
+            Удалить
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 }; 

@@ -345,7 +345,15 @@ export const TaskForm: React.FC<TaskFormProps> = ({ mode }) => {
             )}
           </FormControl>
 
-          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: 2, 
+            justifyContent: 'flex-end',
+            '& .MuiButton-root': {
+              width: { xs: '100%', sm: 'auto' }
+            }
+          }}>
             <Button
               variant="outlined"
               onClick={() => navigate('/')}

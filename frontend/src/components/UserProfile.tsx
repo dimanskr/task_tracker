@@ -126,13 +126,15 @@ export const UserProfile: React.FC = () => {
         await updateEmployee(linkedEmployee.id, {
           full_name: employeeFullName,
           positions_ids: selectedPositions,
-          user: userId
+          user: userId,
+          positions: selectedPositions.map(id => positions.find(p => p.id === id)).filter(Boolean) as Position[]
         });
       } else if (employeeFullName && selectedPositions.length > 0) {
         await createEmployee({
           full_name: employeeFullName,
           positions_ids: selectedPositions,
-          user: userId
+          user: userId,
+          positions: selectedPositions.map(id => positions.find(p => p.id === id)).filter(Boolean) as Position[]
         });
       }
 
@@ -228,17 +230,30 @@ export const UserProfile: React.FC = () => {
 
   return (
     <Paper sx={{ p: 4, maxWidth: 800, mx: 'auto', mt: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: { xs: 'column', sm: 'row' },
+        justifyContent: 'space-between', 
+        alignItems: { xs: 'stretch', sm: 'flex-start' }, 
+        gap: 2,
+        mb: 3 
+      }}>
         <Typography variant="h4" gutterBottom>
           Профиль пользователя
         </Typography>
         {canEditProfile && (
-          <Box sx={{ display: 'flex', gap: 2 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: 2,
+            width: { xs: '100%', sm: 'auto' }
+          }}>
             <Button
               variant="contained"
               color="primary"
               onClick={() => setIsEditing(true)}
               disabled={loading}
+              fullWidth={false}
             >
               Редактировать
             </Button>
@@ -248,6 +263,7 @@ export const UserProfile: React.FC = () => {
                 color="error"
                 onClick={() => setDeleteDialogOpen(true)}
                 disabled={loading}
+                fullWidth={false}
               >
                 Удалить профиль
               </Button>

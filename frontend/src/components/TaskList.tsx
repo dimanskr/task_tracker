@@ -260,7 +260,14 @@ export const TaskList: React.FC = () => {
 
   return (
     <div>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: { xs: 'column', sm: 'row' },
+        justifyContent: 'space-between', 
+        alignItems: { xs: 'stretch', sm: 'center' }, 
+        gap: 2,
+        mb: 3 
+      }}>
         <Typography variant="h4">
           Список задач
         </Typography>
@@ -269,13 +276,23 @@ export const TaskList: React.FC = () => {
             variant="contained" 
             color="primary"
             onClick={() => navigate('/task/create')}
+            fullWidth={false}
           >
             Создать задачу
           </Button>
         )}
       </Box>
 
-      <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
+      <Stack 
+        direction={{ xs: 'column', sm: 'row' }} 
+        spacing={2} 
+        sx={{ 
+          mb: 3,
+          '& .MuiFormControl-root': {
+            width: { xs: '100%', sm: 'auto' }
+          }
+        }}
+      >
         <FormControl sx={{ minWidth: 200 }}>
           <InputLabel>Сортировка по дедлайну</InputLabel>
           <Select

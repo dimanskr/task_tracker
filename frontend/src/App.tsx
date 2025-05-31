@@ -79,10 +79,10 @@ function App() {
                 height: 32,
                 bgcolor: 'transparent'
               }}
-            />
-            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-              Task Tracker
-            </Typography>
+          />
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            Task Tracker
+          </Typography>
           </Box>
           {!isMobile && (
             <Box sx={{ display: 'flex', gap: 2, ml: 'auto' }}>
